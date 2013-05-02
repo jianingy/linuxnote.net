@@ -1,0 +1,174 @@
+#+POSTID: 939
+#+DATE: [2012-02-25 Sat 11:12]
+#+TITLE: Ocaml Godi
+#+AUTHOR: Jianing YANG
+#+EMAIL: jianingy.yang@gmail.com
+#+CATEGORY: ocaml
+#+TAGS: ocaml ocaml-godi
+#+OPTIONS: ^:nil
+
+* 用 Godi 安装 Ocaml 扩展库 (Library)
+
+godi_console 是用来管理库的工具。他被的存放在
+=/opt/godi/sbin/godi_console= 下面。
+
+
+** 查看所有扩展库
+
+#+BEGIN_SRC sh
+$ godi_console -list -names
+#+END_SRC
+
+这命令速度奇慢，长时间看不到输出请别慌。
+
+** 安装扩展库
+
+用 =godi_console -list= 找到合适的扩展后，用 =perform= 指令安装。比如：
+
+#+BEGIN_SRC sh
+$ godi_console perform -build godi-curl
+#+END_SRC
+
+* 扩展库基本使用方法
+
+在普通 Ocaml 程序里面可以用 =topfind= 及其 "directives" 来加载扩展库，
+例如：
+
+#+BEGIN_SRC ocaml
+#use "topfind" ;;
+#require "yojson";;
+#require "curl" ;;
+#+END_SRC
+
+扩展库加载后，直接用 =Open= 就可以打开里面的模块了。
+
+在编译 Ocaml 程序时，要去掉上面的 "directives" 。然后采用 =ocamlfind=
+程序来编译，例如：
+
+#+BEGIN_SRC sh
+ocamlfind opt -package yojson -package curl -package unix -package pcre -c search.ml
+ocamlfind opt -package yojson -package curl -package unix -package pcre -linkpkg -o search search.cmx
+#+END_SRC
+
+或者采用 =ocamlbuild= 来编译，
+#+BEGIN_SRC sh
+ocamlbuild -use-ocamlfind -pkg curl,unix,pcre search.native
+#+END_SRC
+
+** 常见问题
+
+*** 提示 "#require" 不是有效的 "directive"
+
+基本都是因为 #use "topfind" 没有加上
+
+* 主流扩展及其特点
+
+** JSON 解析
+
+Google 出来的什么 =json-wheel=, =json-static= 都是已经过时的东西了。貌
+似现在 ocamler 都是用 =yojson= 和 =atdgen= 的。
+
+*** yojson
+
+=yojson= 返回一个可遍历的数据结构，递归搞下就OK了。实例如下：
+
+#+BEGIN_SRC json
+{
+    "num": 1,
+    "result": [
+        {
+            ".cn": "xxxxxxxx.site",
+            ".id": 123456,
+            ".manifest": "vm_server",
+            "capex": "",
+            "clone_mac": "00:12:34:56:78:AB",
+            "clone_profile": "vm_app_server",
+            "description": "",
+            "dns_ip": "172.16.0.1",
+            "hw_cpu": "",
+            "hw_harddisk": "",
+            "hw_mem": "",
+            "is_clone": "",
+            "manufacturer": "DELL",
+            "model": "vm",
+            "node_tag": "",
+            "nodegroup": "group1",
+            "nodename": "xxxxxxxx.site",
+            "opex": "",
+            "os": "rhel_5u4_64",
+            "rack": "S1-T1-Z1",
+            "site": "S1",
+            "state": "working_offline",
+            "vmparent": "yyyyyyyy.site"
+        }
+    ],
+    "start": 0,
+    "total": 0
+}
+#+END_SRC
+
+#+BEGIN_SRC ocaml
+  let json_obj = "<THE ABOVE JSON STRING>" in
+  let get_value key obj =
+    match obj with
+	      `Assoc(l) -> List.find (fun (k, v) -> k = key) l
+      | _ -> key, `String("") in
+  let _, nodes = get_value "result" json_obj in
+  let rec map_result acc item =
+    match item with
+	      `List(hd :: tl) -> map_result ((get_value "nodename" hd) :: acc) (`List tl)
+      | _ -> acc in
+  let add_result acc item =
+    match item with
+	      _, `String(v) -> v :: acc
+      | _ -> acc in
+  let result = List.fold_left add_result [] (map_result [] nodes) in
+  result ;;
+#+END_SRC
+
+** HTTP 访问
+
+最开始用了传说中的 =netclients= 里面的 =Http_client= 。结果发现下面这个
+简单的程序编译出来的二进制文件也要 3.9M 感觉有些不爽。
+
+#+BEGIN_SRC ocaml
+(* This example shows how to get a file from a HTTP server using
+ * the Convenience module.
+ *
+ * Load this into the toplevel, then:
+ * get_and_print "http://www.caml.org/";;
+ *)
+
+open Http_client.Convenience;;
+
+let get_and_print url =
+  let s = http_get url in
+  print_string s;
+  flush stdout
+;;
+
+let () =
+	get_and_print Sys.argv.(1) ;;
+#+END_SRC
+
+随后尝试了，Ocaml 版本的 Curl -- ocurl 。由于动态连接了 =libcurl= ，下
+面这个简单的程序编译出来只有 590K+ 。
+
+#+BEGIN_SRC ocaml
+let get_and_print url =
+  let http_cb acc s =
+    Buffer.add_string acc s;
+    String.length s in
+  let connection = Curl.init () in
+  let b = Buffer.create 16384 in
+  Curl.setopt connection (Curl.CURLOPT_URL url);
+  Curl.setopt connection (Curl.CURLOPT_WRITEFUNCTION (http_cb b));
+  Curl.perform connection;
+  print_string (Buffer.contents b) ;
+  flush stdout ;;
+
+let () =
+	get_and_print Sys.argv.(1) ;;
+#+END_SRC
+
+暂时还没有其他方面的比较。不过感觉上 =netclients= 的易用性似乎要好些。

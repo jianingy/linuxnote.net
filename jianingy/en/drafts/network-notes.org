@@ -1,0 +1,16 @@
+#+TITLE: Network Mini Tools
+#+LINK_HOME: index.html
+#+UP_HOME: index.html
+
+* MAC Address
+
+** Random Mac Address Generator
+
+The following script takes the advantage of /dev/urandom to generate an random
+MAC address.
+
+#+begin_src sh
+#!/bin/sh
+exec 2>/dev/null
+dd if=/dev/urandom bs=1 count=6 | od -t x1 | sed '2d;s/^0\+ //;s/ /:/g'
+#+end_src

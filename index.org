@@ -1,0 +1,72 @@
+#+TITLE: LINUXNOTE DOT NET
+#+AUTHOR: linuxnote.net
+#+EMAIL: linuxnote.net
+
+#+BEGIN_HTML
+<p>编辑前请阅读：<a href="./jianingy/zh/misc/linuxnote.html">linuxnote 编辑方法</a></p>
+<div class="row">
+<div class="span4">
+<h2>Linux</h2>
+        <ul>
+            <li><a href="/luoyi/hmnhdce.html">Arch Linux On Iomega® Home Media Network Hard Drive, Cloud Edition</a></li>
+            <li><a href="/luoyi/oneline.html">Luoyi's One Line Command</a></li>
+            <li><a href="./jianingy/en/linux/openssh.html">OpenSSH Tips</a></li>
+            <li><a href="./jianingy/en/linux/bash.html">Practice Bourne-Again Shell</a></li>
+            <li><a href="./jianingy/en/linux/a-fast-way-to-remove-huge-number-of-files.html">A faster way to delete millions of files in a directory</a></li>
+            <li><a href="./jianingy/zh/misc/ntp-leap-second.html">Linux 内核润秒 BUG 分析</a></li>
+            <li><a href="./jianingy/zh/linux/serial.html">Linux 串口控制台配置合集</a></li>
+            <li><a href="./jianingy/zh/linux/mail.html">Linux 个人邮件系统配置指南</a></li>
+        </ul>
+</div>
+<div class="span4">
+    <h2>Emacs</h2>
+        <ul>
+            <li><a href="./jianingy/en/emacs/presentation.html">Writing Presentation with Emacs</a></li>
+            <li><a href="./jianingy/en/emacs/editing.html">Editing with Emacs</a></li>
+            <li><a href="./jianingy/en/emacs/gnus.html">Emacs GNUS</a></li>
+            <li><a href="./jianingy/en/emacs/org-mode.html">Org-Mode</a></li>
+            <li><a href="./jianingy/en/emacs/org2blog.html">Blog with Org2Blog</a></li>
+            <li><a href="./jianingy/en/emacs/others.html">Miscellaneous Emacs Tricks</a></li>
+            <li><a href="./jianingy/zh/emacs/miscellaneous.html">Emacs 配置大杂烩</a></li>
+            <li><a href="./jianingy/zh/emacs/blorgit.html">Blorgit 简介</a></li>
+        </ul>
+</div>
+<div class="span4">
+    <h2>Programming</h2>
+    <div class="sbody">
+        <ul>
+            <li><a href="/jianingy/zh/django/best-practice">Django Best Practice</a></li>
+            <li><a href="./jianingy/en/prog/python.html">Python Tips</a></li>
+            <li><a href="./jianingy/zh/misc/color.html">如何自动产生图表中的颜色</a></li>
+            <li><a href="./jianingy/zh/ocaml/godi.html">OCaml Godi</a></li>
+            <li><a href="./jianingy/zh/ocaml/snippets.html">OCaml Code Snippets</a></li>
+        </ul>
+    </div>
+</div>
+</div>
+<div class="row">
+<div class="span4">
+    <h2>Networking</h2>
+        <ul>
+            <li><a href="./jianingy/zh/network/c3560.html">C3560 配置小记</a></li>
+            <li><a href="./jianingy/zh/network/squid-l7-routing.html">基于 SQUID 的七层路由</a></li>
+            <li><a href="./luoyi/xunlei.html">迅雷离线自动化下载脚本指南</a></li>
+            <li><a href="./wiki/routeros.html">RouterOS 简明教程</a></li>
+        </ul>
+</div>
+<div class="span4">
+    <h2>欢乐段子</h2>
+        <ul>
+            <li><a href="./jianingy/zh/fun/indian-movies.html">印度电影中各种开挂片段</a></li>
+        </ul>
+</div>
+<div class="span4">
+    <h2>Individual</h2>
+        <ul>
+            <li><a href="jianingy/en/index.html">jianingy (english)</a></li>
+            <li><a href="jianingy/zh/index.html">jianingy (中文)</a></li>
+            <li><a href="whj/index.html">whj</a></li>
+        </ul>
+</div>
+</div>
+#+END_HTML

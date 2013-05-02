@@ -1,0 +1,88 @@
+#+TITLE:     time-wait-state.org
+#+AUTHOR:    Jianing Yang
+#+EMAIL:     jianingy.yang AT gmail DOT com
+#+DATE:      2012-08-20 Mon
+#+DESCRIPTION:
+#+KEYWORDS:
+#+LANGUAGE:  en
+#+OPTIONS:   H:3 num:t toc:t \n:nil @:t ::t |:t ^:nil -:t f:t *:t <:t
+#+OPTIONS:   TeX:t LaTeX:t skip:nil d:nil todo:t pri:nil tags:not-in-toc
+#+INFOJS_OPT: view:nil toc:nil ltoc:t mouse:underline buttons:0 path:http://orgmode.org/org-info.js
+#+EXPORT_SELECT_TAGS: export
+#+EXPORT_EXCLUDE_TAGS: noexport
+#+LINK_UP:
+#+LINK_HOME:
+#+XSLT:
+#+STARTUP: inlineimages
+
+
+
+* 什么是 TIME_WAIT 状态
+TIME_WAIT 状态是 TCP 协议中的一个状态。该状态产生与应用程序主动断开连接
+之后。因此，TIME_WAIT 状态并非服务器程序特有。如果是客户端主动断开连接
+也会进入 TIME_WAIT 状态。
+
+* 为什么会有 TIME_WAIT 状态
+右图的 TCP 连接状态时序图就是一个客户端主动断开连接的例子。可以看出，
+主动断开连接的一方在收到对方最后一个 FIN 包之后进入 TIME_WAIT 状态，并
+且发送自己的最后一个 ACK 包。
+
+TIME_WAIT 状态存在的意义在于：如果主动断开连接一方的最后一个 ACK 包没有
+被对方收到，那么对方会重新发送一个 FIN 包；此时，若连接处于TIME_WAIT 状
+态，主动断开连接的一方则会发送 ACK 包来确认收到重传的 FIN 包。
+
+
+* 如果没有 TIME_WAIT 状态会怎样
+
+如果不存在 TIME_WAIT 状态，那么重传的那个 FIN 包则有可能会窜入一个刚刚
+建立的新连接中。
+
+举例来说，假设存在 TCP 连接 =192.168.0.1:12345 <--> 192.168.0.2:54321=
+。如果没有 TIME_WAIT 状态，那么主动断开连接的一方 =192.168.0.1:12345=
+收到 FIN 包并发送 ACK 包之后，内核就会将连接信息销毁。如果上述的 ACK 包
+丢失，=192.168.0.2= 就会重传最后那个FIN 包。试想，在这个重传的 FIN 包到
+达 =192.168.0.1= 之前，一个新的 TCP连接 =192.168.0.1:1234 <-->
+192.168.0.2:54321= 建立了。那么，当=192.168.0.1= 收到 FIN 包时，有可能
+认为这是在新连接上对方主动要求断开连接。从而导致新的连接中断。
+
+这里说“有可能”是因为 TCP 协议本身还有一个 PAWS (Protected Against
+Wrapped Sequence)  的机制。
+
+#+ATTR_HTML: align=right
+#+BEGIN_SRC plantuml :file tcp-connection-establishment.png
+
+
+note left of client: N/A
+note right of server: LISTEN
+
+== Establishement ==
+
+client -> server: SYN J
+note left of client: <i>(active open)</i> <b>SYN_SENT</b>
+note right of server: <b>SYN_RECVD</b>
+
+server --> client: SYN K, ACK J+1
+note left of client: <b>ESTABLISHED</b>
+
+client -> server: ACK K+1
+note right of server: <b>ESTABLISHED</b>
+
+...Data Transmission...
+
+== Termination ==
+
+client -> server: FIN M
+note left of client: <i>(active close)</i> <b>FIN_WAIT_1</b>
+note right of server: <b>CLOSE_WAIT</b> <i>(passive close)</i>
+
+server --> client: ACK M+1
+note left of client: <b>FIN_WAIT_2</b>
+
+server --> client: FIN N
+note left of client: <b>TIME_WAIT</b>
+note right of server: <b>LAST_ACK</b>
+
+client -> server: ACK N+1
+note right of server: <b>CLOSED</b>
+
+#+END_SRC

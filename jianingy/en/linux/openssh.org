@@ -1,0 +1,169 @@
+#+TITLE: OpenSSH
+#+AUTHOR: Jianing YANG
+#+EMAIL: jianingy.yang@gmail.com
+#+OPTIONS: H:3 num:nil toc:t \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+
+* Network
+
+** Port Forwarding
+
+Port Forwarding is commonly considered a firewall bypassing technique.
+Usually, it enables hosts which are outside an intranet to access a specified
+port of a specified host inside the intranet. It could also be used to access
+web site, which is banned by a local network firewall. It is useful in various
+circumstances such as
+
+Access a host in office from home
+Access a host, which is banned by firewall of your network
+
+To use port forwarding, we need a bouncer host on the Internet. The network
+layout can be demonstrated with the following diagram
+
+#+begin_src twopi :file images/ssh-port-forwarding-example.png
+digraph G {
+ranksep = 1.5;
+ratio=auto;
+bgcolor=white;
+
+node [
+labelloc=b
+height=0.7
+fontsize=7
+fontname="monospace"
+shape = none
+];
+
+"joker" [
+   label = "WorkStation/10.1.1.10"
+   image = "/opt/assets/icons/cisco/pc.png"
+];
+
+"bouncer" [
+  label = "WorkStation/1.2.3.4",
+  image = "/opt/assets/icons/cisco/pc.png"
+];
+
+"blocked-site" [
+  label = "A Website banned by firewall/4.5.6.7",
+  image = "/opt/assets/icons/cisco/pc.png"
+]
+
+"firewall" [
+  label = "Firewall",
+  image = "/opt/assets/icons/cisco/firewall.png"
+]
+
+"internet" [
+  label = "INTERNET", labelloc=c, imagescale=true,
+  image = "/opt/assets/icons/cisco/cloud.png"
+]
+
+"joker" -> "firewall"
+"firewall" -> "internet"
+"blocked-site" -> "internet" [dir=both]
+"bouncer" -> "internet"  [dir=both]
+}
+#+end_src
+
+#+results:
+[[file:assets/ssh-port-forwarding-example.png]]
+
+There are two types of port forwarding, the Local Port Forwarding and the
+Remote Port Forwarding.
+
+*** Local Port Forwarding
+
+#+begin_src sh
+ssh -N -L 8080:4.5.6.7:80 1.2.3.4
+#+end_src
+
+The above command starts a local port forwarding. It forwards port 80 on host
+4.5.6.7 to port 8080 on host 1.2.3.4. According to the above diagram, the
+website 4.5.6.7:80 has been banned by a firewall. After set up the port
+forwarding, we could access 4.5.6.7:80 on our computer that is behind the
+firewall by using 1.2.3.4:8080.
+
+*** Remote Port Forwarding
+
+#+begin_src sh
+ssh -N -R 2222:localhost:22 1.2.3.4
+#+end_src
+
+The remote port forwarding command looks similar to the local one, except for
+the -R option. The above command starts a remote port forwarding that forwards
+port 22 on localhost, the host with IP 10.1.1.10 in the above diagram, to port
+2222 on 1.2.3.4. When the forwarding is done, we could access our host by
+1.2.3.4:2222, though it is behind a firewall.
+
+*** Keepalive Trick
+
+Sometimes a router may cut off a port forwarding connection due to that there
+is no traffic[fn:1] in the connection for a relatively long period. In order to
+prevent this happens, we could simply replace the ‘-N’ option in all above
+commands with a command that can keep outputting some data every a few
+seconds. For instance,
+
+#+begin_src sh
+ssh -R 2222:localhost:22 1.2.3.4 "vmstat 60"
+#+end_src
+
+The command 'vmstat 60' keep printing a memory status every 60 seconds. It
+deceives the routers in between that the connection is still being used.
+
+[fn:1] The option TCPKeepAlive seems to be designed for this purpose. However, I
+tried before and found it doesn't work well. Hence, most of the time, I'd like
+to use the 'vmstat 60' strategy.
+
+*** Bind a forwarded port on other interface
+
+A forwarded port is binded on address 127.0.0.1 by default. In order to make
+it available for other people, it can be binded on other address by using
+option ‘-b’. For instance,
+
+#+begin_src sh
+ssh -b 0.0.0.0 -R 2222:localhost:22 1.2.3.4 'vmstat 60'
+#+end_src
+
+Notice that the ‘-b’ option works properly only if the option ‘GatewayPorts’
+in /etc/sshd_config is set to ‘yes’. Otherwise, it may raise an error
+indicates the failure of binding.
+
+** SOCKS Server
+
+Port Forwarding is an efficient way to bypass a firewall. However, when it
+comes to access more than one resource of an intranet, it is not a
+maintainable or sometimes even a feasible way to build port forwarding for
+each of every resource. In the above circumstance, we can set up a SOCKS5
+server using OpenSSH. For instance
+
+#+begin_src sh
+ssh -N -D 0.0.0.0:1080 1.2.3.4
+#+end_src
+
+The above command starts an SOCKS5 server on localhost. The server would be
+listening on port 80. After it is started, an SOCKS5 supported program, such
+as Firefox Web Browser, could use it to access the intranet which host 1.2.3.4
+belongs to. It can also be used by other programs, which does not support
+SOCKS5 protocol, as long as SOCKS5 client wrapper, such as ProxyChains on
+Linux or ProxyCap on Mac, is running.
+
+* Configuration
+
+** Customize OpenSSH client settings
+
+When it comes to access a server with OpenSSH listened on non-standard port,
+we could explicitly specify the port number by using the ‘-p’ option for ssh
+or the ‘-P’ option for scp. However, instead of providing extra options every
+time, we could write it into a configuration, the ~/.ssh/ssh\_config. For
+example,
+
+#+begin_src sh
+Host foo.bar.com
+   Port 12345
+#+end_src
+
+Now, ‘ssh foo.bar.com’ has the same effect of ‘ssh -p 12345 foo.bar.com’
+
+* Miscellaneous Tricks
+
+** Shutdown a SSH connection immediately

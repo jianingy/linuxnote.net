@@ -1,0 +1,103 @@
+#+TITLE: Editing with Emacs
+#+AUTHOR: Jianing YANG
+#+EMAIL: jianingy.yang@gmail.com
+#+OPTIONS: H:3 num:nil toc:t \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+
+* Useful Keybindings
+
+- M-\ :: Clean heading whitespaces
+- M-m :: Move to first non-whitespace character
+- C-x o :: regain minibuffer focus
+- C-h f :: function help
+- C-h v :: variable help
+- C-h k :: key help
+- C-c C-w :: In agenda view, refile current item
+- C-h e :: View Echo Area Message
+
+* Desktop Perservation
+
+Emacs has a very handy component called =desktop=. It help me save
+current editing files, which in turn saves me from a lots of C-x
+C-f whenever I start emacs. =desktop can be enabled by,
+
+#+begin_src emacs-lisp
+(load "desktop")
+(desktop-load-default)
+(desktop-read)
+#+end_src
+
+To save current opening files, use M-x desktop-save. To clear previous saved
+state, use M-x desktop-clear.
+
+* Smoothing Scroll
+
+These settings make emacs scroll more smooth. Good for eyes.
+
+#+begin_src emacs-lisp
+(setq mouse-wheel-scroll-amount '(1 ((shift) . 1))) ;; one line at a time
+(setq mouse-wheel-progressive-speed nil)            ;; don't accelerate scrolling
+(setq mouse-wheel-follow-mouse 't)                  ;; scroll window under mouse
+(setq scroll-step 1)                                ;; keyboard scroll one line at a time
+(setq scroll-margin 3
+      scroll-conservatively 10000)                  ;; prevent jumpy
+#+end_src
+
+* English-Chinese Dictionary
+
+This is a function that uses API from dict.cn to translate English
+into Chinese.
+
+#+begin_src emacs-lisp
+(defun curl-dict-cn ()
+  (interactive)
+  (message
+   (replace-regexp-in-string
+   "<[^>]+>" " "
+   (reduce 'concat
+           (remove-if-not (lambda(s) (numberp (string-match "<key\\|<def" s)))
+                          (split-string
+                           (shell-command-to-string
+                            (concat "curl -s 'http://api.dict.cn/ws.php?utf8=true&q=" (current-word) "'")) "\n"  t)
+                          )))))
+#+end_src
+* Run shell command
+
+- M-! :: run command and get output in minibuffer
+- C-u M-! :: run command and redirect output to current buffer
+- M-| :: pipe current buffer into command's stdin.
+
+* Highlight Lines Exceeded 80 chars
+
+The following code helps to find out common format problems such as,
+
+- Lines over 80 characters
+- Indentation with Tab
+- Trailing whitespaces
+
+#+begin_src emacs-lisp
+;; Step I. create custom font faces for highlighting
+(custom-set-faces
+ '(my-tab-face            ((((class color)) (:background "grey10"))) t)
+ '(my-trailing-space-face ((((class color)) (:background "gray10"))) t)
+ '(my-long-line-face ((((class color)) (:background "gray10"))) t))
+
+;; Step II. create a render function
+(defun cc-mode-add-keywords (mode)
+  (font-lock-add-keywords
+   mode
+   '(("\t+" (0 'my-tab-face append))
+     ("^.\\{81\\}\\(.+\\)$" (1 'my-long-line-face append)))))
+
+;; Step III. enable modes with this feature
+(cc-mode-add-keywords 'c-mode)
+(cc-mode-add-keywords 'cc-mode)
+(cc-mode-add-keywords 'c++-mode)
+(cc-mode-add-keywords 'perl-mode)
+(cc-mode-add-keywords 'python-mode)
+#+end_src
+
+* Emacs Debugging
+
+#+begin_src emacs-lisp
+(setq debug-on-error t)
+#+end_src

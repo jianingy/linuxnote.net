@@ -1,0 +1,94 @@
+#+TITLE: Shell Script 
+#+AUTHOR: Whj
+#+EMAIL: wfast888@hotmail.com
+#+OPTIONS: H:2 num:nil toc:t \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+- [[file:index.org][GO BACK]]
+
+* Something useful about Bash Shell Script
+** 特殊变量
+#+begin_example
+$0 这个程序的执行名字 
+$n 这个程序的第n个参数值，n=1..9 
+$* 这个程序的所有参数 
+$# 这个程序的参数个数 
+$$ 这个程序的PID 
+$! 执行上一个指令的PID 
+$? 执行上一个指令的返回值
+
+#+end_example
+
+** About test
+#+begin_example
+格式：-操作符 filename 
+-e 文件存在返回1， 否则返回0 
+-r 文件可读返回1,否则返回0 
+-w 文件可写返回1,否则返回0 
+-x 文件可执行返回1,否则返回0 
+-o 文件属于用户本人返回1, 否则返回0 
+-z 文件长度为0返回1, 否则返回0. 
+-f 文件为普通文件返回1, 否则返回0 
+-d 文件为目录文件时返回1, 否则返回0 
+
+B.测试字符串 
+
+字符串1 = 字符串2　当两个字串相等时为真 
+字符串1 != 字符串2 当两个字串不等时为真 
+-n 字符串　 　　　 当字符串的长度大于0时为真 
+-z 字符串　　　　　当字符串的长度为0时为真 
+! –z 字符串　　　　当串字符串为非空时为真 
+
+C.测试两个整数关系 
+
+数字1 -eq 数字2　　　　 两数相等为真 
+数字1 -ne 数字2　　　　 两数不等为真 
+数字1 -gt 数字2　　　　 数字1大于数字2为真 
+数字1 -ge 数字2 　　　  数字1大于等于数字2为真 
+数字1 -lt 数字2　　　　 数字1小于数字2为真 
+数字1 -le 数字2　　　　 数字1小于等于数字2为真 
+
+D.逻辑测试 
+-a 　 　　　　　 与 
+-o　　　　　　　 或 
+!　　　　　　　　非
+用于将测试条件连接起来，其优先顺序为：！最高，-a次之，-o最低
+#+end_example
+
+** 循环
+#+begin_example
+循环（for、while、until）：
+for i in `cat office_switch_list.txt`
+do
+        ./office_pps_monitoring.sh $i
+done
+#------------------------------------------------------
+i=1
+while [ $i -lt 10 ]
+do
+  echo $i
+  i=$[i+1]
+done
+#------------------------------------------------------
+i=10
+until [ $i -lt 1 ]
+do
+  echo $i
+  i=$[i-1]
+done
+
+until循环和while循环的区别在于：while循环在条件为真时继续执行循环，而until则是在条件为假时继续执行循环。
+
+
+循环控制语句break和continue
+　　break用于立即终止当前循环的执行，而contiune用于不执行循环中后面的语句而立即开始下一个循环的执行。这两个语句只有放在do和done之间才有效。
+
+i=1
+while [ $i -lt 10 ]
+Do
+  if [ $i -eq 5 ];then
+	i=$[i+1]        
+	continue
+  fi
+  echo $i
+  i=$[i+1]
+done
+#+end_example

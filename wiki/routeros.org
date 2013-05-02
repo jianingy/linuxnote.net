@@ -1,0 +1,521 @@
+#+TITLE: RouterOS 简明教程
+#+AUTHOR: Jianing YANG, Huijun WANG
+#+OPTIONS: H:2 num:nil toc:t \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+
+由于个人配置习惯问题，这里的只列出命令行下的配置方法。:D
+
+
+* RB750外观
+#+ATTR_HTML: class="frm"
+[[http://i1051.photobucket.com/albums/s437/jianingy/IMG_20120111_132835.jpg]]
+
+#+ATTR_HTML: class="frm"
+[[http://i1051.photobucket.com/albums/s437/jianingy/IMG_20120111_132848.jpg]]
+* 初次配置
+
+刚拿到新机器的时候有两个办法可以连接上机器进行配置，
+- 通过 mac-telnet 连接（目前仅适用于WINDOWS客户端）
+- 通过预定义地址进行连接
+
+** 通过 mac-telnet 进行连接
+
+TBC...
+
+** 通过预定义地址进行连接
+
+首先，把客户端与设备的第二口直接链接。然后在客户端配置一个
+192.168.88.0/24网段的额外IP地址。这个地址不能是192.168.88.1，否则会和设
+备地址冲突。例如，Linux下配置额外地址的方法是：
+
+#+begin_src sh
+ifconfig eth0:0 192.168.88.10 netmask 255.255.255.0
+#+end_src
+
+地址配置好后就可以使用 =telnet 192.168.88.1= 连接设备了。初始管理员账户
+是 =admin=, 没有密码。
+
+#+begin_example
+$ telnet 192.168.88.1
+Trying 192.168.88.1...
+Connected to 192.168.88.1.
+Escape character is '^]'.
+
+MikroTik v5.4
+Login: admin
+Password:
+
+
+
+
+
+
+
+
+  MMM      MMM       KKK                          TTTTTTTTTTT      KKK
+  MMMM    MMMM       KKK                          TTTTTTTTTTT      KKK
+  MMM MMMM MMM  III  KKK  KKK  RRRRRR     OOOOOO      TTT     III  KKK  KKK
+  MMM  MM  MMM  III  KKKKK     RRR  RRR  OOO  OOO     TTT     III  KKKKK
+  MMM      MMM  III  KKK KKK   RRRRRR    OOO  OOO     TTT     III  KKK KKK
+  MMM      MMM  III  KKK  KKK  RRR  RRR   OOOOOO      TTT     III  KKK  KKK
+
+  MikroTik RouterOS 5.4 (c) 1999-2011       http://www.mikrotik.com/
+
+
+[admin@MikroTik] >
+#+end_example
+
+* ADSL(PPPoE) 拨号配置
+
+假设 ADSL MODEM 连接在 =ether1= 端口上，在其上创建一个PPPoE连接，
+注意：你连接ADSL MODEM的接口名称不一定是ether1,可能是其他接口。ROS中，接口名称也可以自行更改。比如在751G的默认配置中ether1的接口名称为ether1-gateway。
+
+#+begin_example
+/interface pppoe-client add interface=ether1 user=yourusername password=yourpassword profile=default
+#+end_example
+
+还有两个额外的参数比较有用，
+
+- use-peer-dns :: 设置为 =no= 的话，不会接受ISP推送过来的DNS。特别适合想自己搭建DNS的兄弟
+- add-default-route :: 设置为 =no=的话，PPPOE拨号后，不会设置指向PPPOE接口的默认路由。当拨号完称时，使用/ping x.x.x.x测试网络时，no route to host。需要自己手动设置默认路由，命令如下：
+/ip route add dst-address=0.0.0.0/0 gateway=pppoe-out1
+不想受虐的，add-default-route，这个参数还是设置为yes好了。
+
+如果使用以上两个额外参数的话，配置如下：
+/interface pppoe-client add interface=ether1 user=yourusername password=yourpassword profile=default add-default-route=yes use-peer-dns=yes
+
+添加拨号设置后并不会自动连接，需要通过 =/interface pppoe-client enable
+0= 来启动 =PPPoE= 连接。 连接启动后可以通过 =/interface pppoe-client
+print= 查看拨号状态。如果状态为 =R= 表示已经链接成功了。这时也就可以通
+过 =/ip address print= 看到ISP分配给我们的IP地址了。
+
+#+begin_example
+[jianingy@nby-nat-tjh] /interface pppoe-client> print
+Flags: X - disabled, R - running
+ 0  R ;;; unicom adsl
+      name="pppoe-out1" max-mtu=1480 max-mru=1480 mrru=disabled interface=ether1
+      user="username" password="password" profile=default service-name="" ac-name=""
+      add-default-route=yes dial-on-demand=no use-peer-dns=no
+      allow=pap,chap,mschap1,mschap2
+#+end_example
+
+如果连接长时间不能进入 =R= 状态，可通过 =/log print= 查看连接日志诊断问
+题。
+
+如果想停止拨号连接可以使用 =/interface pppoe-client disable= 来停止对应
+的连接。停止后的链接状态将被标记为 =X= 。
+
+* 局域网 DHCP 服务器配置
+
+** 基本配置
+
+首先，要创建一个地址池(IP Pool)。新系统有一个默认的池子：default-dhcp，
+范围是 =192.168.88.1-192.168.88.254=。要创建一个新的地址池，使用命令：
+
+#+begin_example
+/ip pool add name=my-ip-pool ranges=192.168.1.2-192.168.1.254
+#+end_example
+
+接下来用已有的地址池建立一个DHCP服务，
+
+#+begin_example
+/ip dhcp-server add address-pool=my-ip-pool interface=ether1 lease-time=3d
+#+end_example
+
+给对应的接口添加与地址池在同一个子网的地址，
+#+begin_example
+/ip address add address=192.168.1.1/24 network=192.168.1.0 interface=ether1
+#+end_example
+
+为此子网设置相关参数，比如网段，网关，掩码，DNS，WINS
+#+begin_example
+/ip dhcp-server network add address=192.168.1.0/24 gateway=192.168.1.1 netmask=24 dns-server=202.106.0.20 wins-server="" ntp-server="" dhcp-option=""
+#+end_example
+如果不设置以上参数，现象是DHCP获取地址时，只能获取ip，但网关，掩码，DNS之类的配置为空。
+
+** 固定 DHCP 地址
+
+RouterOS 允许通过添加静态租约(lease)的方式来对 MAC 地址和 IP 地址进行
+绑定。操作方法是，
+
+#+begin_example
+/ip dhcp-server lease add mac-address=00:01:02:03:04:05 address=192.168.36.10
+#+end_example
+
+* DNS 服务器配置
+
+如果在 PPPoE 拨号配置里面没有指定 =no-peer-dns= 为 =yes= ，那么DNS服务
+器地址将会在每次连接时由ISP推送过来。如果需要手工制定可以用，
+
+#+begin_example
+/ip dns set servers=192.168.88.10
+#+end_example
+
+服务器可以制定多个，多个地址之间需要用逗号分隔开。
+
+这里需要注意的是手工制定的DNS服务器会在PPPoE重连时被ISP推送的DNS服务器
+覆盖掉。如需长久使用自己的DNS服务器，需要在PPPoE拨号配置里指定
+=no-peer-dns= 为 no。
+
+* 静态 DNS 配置
+
+ROS 支持添加本地的静态DNS 。例如：要给 192.168.88.10 配置一个域名，
+
+#+begin_example
+/ip dns static add address=192.168.88.10 name=www.homenet.com
+#+end_example
+
+注意，静态域名的优先级要高于DNS查询，类似于Linux上的 =/etc/hosts= 文件
+的作用。因此，如果配置的域名与实际存在的域名冲突，则以静态 DNS 配置为准。
+
+* OpenVPN 配置
+
+** OpenVPN 服务器配置
+
+OpenVPN的配置中有两点需要注意
+
+1) RouterOS 目前仅仅支持 TCP 方式的OpenVPN。因此首先要调整OpenVPN服务器为TCP模式。
+2) RouterOS 目前不支持 LZO 压缩。因此需要去掉服务器端的 =comp-lzo= 设置。
+
+下面是一个 TCP 模式的配置实例：
+#+begin_example
+proto tcp
+port 1196
+mode server
+dev tap0
+ca ca.crt
+cert cert1.crt
+key cert1.key
+dh dh1024.pem
+server 192.168.100.0 255.255.255.0
+ccd-exclusive
+client-config-dir /etc/openvpn/ccd
+client-to-client
+keepalive 5 300
+user nobody
+group nogroup
+persist-key
+persist-tun
+log /dev/stdout
+verb 3
+cipher AES-256-CBC
+#+end_example
+** OpenVPN 客户端配置
+
+*** 导入证书
+首先，需要导入 OpenVPN 需要的证书文件。需要导入的证书文件包括：
+
+1. CA 证书 =ca.crt=
+2. 客户端公钥 =cert.crt=
+3. 客户端私钥 =cert.key=
+
+证书准备好后，通过 FTP 上传到路由器里面。接下来开始导入证书，
+
+#+begin_example
+/certificate import file-name=ca.crt
+/certificate import file-name=cert.crt
+/certificate import file-name=cert.key
+#+end_example
+
+导入时会提示输入证书的 Passphrase 。如果没有设置 Passphrase 直接回车即可。
+
+*** 客户端配置
+
+证书导入好后，添加一个新的 OpenVPN 客户端，
+#+begin_example
+/interface ovpn-client add add-default-route=no auth=sha1 certificate=cert cipher=aes256 connect-to=1.1.1.1 disabled=no mode=ethernet name="ovpn-out1" user=""
+#+end_example
+
+**** 参数说明
+
+- add-default-route :: 如果只需要特定路由走 OpenVPN ，设置为 =no= 就好。
+- mode :: OpenVPN 工作模式，需要跟服务器端一致。二层选 =ethernet= , 三层选 =ip= 。
+- user :: 用户认证时的用户名。如果服务器端没有启动用户认证，随便添一个就好。
+
+* 静态路由配置
+
+静态路由的添加非常简单，
+
+#+begin_example
+/ip route add dst-address=72.145.0.0/16 gateway=192.168.40.1 comment="google"
+#+end_example
+
+为让静态路由更容易维护，最好每次添加都通过 =comment= 字段添加一个有意义的注释。
+
+* 防火墙配置
+* NAT 配置
+
+** 共享上网（SNAT）
+
+多人共享上网需要通过如下方法配置SNAT，其中 =out-inferface= 为出口连接接口（与ADSL猫或者小区宽带连接的那个接口）
+#+begin_example
+/ip firewall nat add chain=srcnat action=masquerade out-interface=ether1
+#+end_example
+注意：如果是配置pppoe拨号的共享上网，此处的out-interface应该设置为pppoe-out1
+
+特别注意，如果设置了 OpenVPN 等 VPN 接口，也要对这些接口进行 SNAT 设置。例如：
+#+begin_example
+/ip firewall nat add chain=srcnat action=masquerade out-interface=ovpn-out1
+#+end_example
+
+** 端口转发（DNAT）
+
+当使用BT等P2P软件需要进行端口转发配置。例如：将8000-9000端口的tcp/udp都映射到下载器(192.168.36.10)上。
+
+#+begin_example
+/ip firewall nat add action=dst-nat chain=dstnat comment="p2p downloader tcp" disabled=no dst-port=8000-9000 in-interface=pppoe-out1 protocol=tcp to-addresses=192.168.36.10
+/ip firewall nat add action=dst-nat chain=dstnat comment="p2p downloader udp" disabled=no dst-port=8000-9000 in-interface=pppoe-out1 protocol=udp to-addresses=192.168.36.10
+/ip firewall nat add action=dst-nat chain=dstnat comment="diskstation ssh" disabled=no dst-port=2222 in-interface=pppoe-out1 protocol=tcp to-addresses=192.168.36.9 to-ports=22
+#+end_example
+
+参数说明：
+
+- dst-port :: 目标端口。可以是单个端口，也可以是一个范围
+- in-interface :: 外部接口，一般是 ADSL 连接的接口。
+- to-addresses :: 运行P2P下载软件的机器地址。
+- protocol :: 转发的协议，可以是 tcp 或者 udp
+
+* BGP 路由配置
+* QOS 配置 (流量控制）
+
+QoS (Quality of Service) 也就是我们常说的流量控制。该技术为我们提供的
+功能有，
+
+1. 等分各个客户端的带宽，防止个别客户端占用过多带宽。
+2. 让特定服务（例如：DNS）优先发送数据，从而达到感官上的网络加速
+3. 保证某些程序的基础带宽。可用于网游的优化。
+
+接下来，我将逐步说明 QoS 每个环节设计的网络概念和配置方法。最后会给出
+一个附有说明的完成的例子。
+
+
+** RouterOS QoS 基础
+
+ROS 中 QoS 的配置可划分为两大部分：包标记 (Packet Marking) 以及流量控制
+(Traffic Shape) 。
+
+我们首先需要对不同服务的数据包进行准确的标记，然后才能通过流量控制手段
+对这些被标记的包进行相应的控制。
+
+** 包标记 (Packet Marking)
+
+包的标记是在防火墙的 mangle 表中完成的。有两种标记的方法：
+
+1) 直接对 packet 进行标记;
+2) 通过 connection 进行标记。
+
+例如，标记 192.168.1.0/24 网段请求 HTTP 的流量。可以直接标记 packet ，
+
+#+BEGIN_EXAMPLE
+/ip firewall mangle
+add protocol=tcp dst-port=80 src-address=192.168.1.0/24 out-interface=pppoe-out1 chain=forward action=mark-packet new-packet-mark=packet-http passthrough=no
+add protocol=tcp src-port=80 dst-address=192.168.1.0/24 in-interface=pppoe-out1 chain=forward action=mark-packet new-packet-mark=packet-http passthrough=no
+#+END_EXAMPLE
+
+也可以先标记 connection 再标记 packet，
+
+#+BEGIN_EXAMPLE
+/ip firewall mangle
+add connection-state=new protocol=tcp dst-port=80 src-address=192.168.1.0/24 out-interface=pppoe-out1 chain=forward action=mark-connection new-connection-mark=conn-http passthrough=yes
+add connection-mark=conn-http chain=forward action=mark-packet new-packet-mark=packet-http passthrough=no
+#+END_EXAMPLE
+
+不论是哪种方法，最后都要对 packet 进行正确的标记。只有正确标记了packet
+后续的控制工作才能正常进行。
+
+上述两种方法的区别在于先标记 connection 的方法更有效率。在这个例子中，
+采用直接标记 packet 的方法需要对每个 packet 进行 4 次过滤操作。这 4 次
+过滤分别涉及 =protocol= ， =src-port= / =dst-port= ， =src-adddress= /
+=dst-address= 以及 =in-interface= / =out-interface= 。相比之下，先标记
+connection 的方法只会在第一个包到达时进行多次过滤。后续的包只需要过滤是
+否含有相应的 =connection-mark= 即可。
+
+在采用第二种方法时还应该注意：这里的 connection 指的并不是 TCP/IP 协议
+里面的连接，而是 ROS connection tracking 里定义的连接。换句话说，UDP 协
+议也可以进行 =connection-mark= 。
+
+我们注意到例子中的标记工作都是在 FORWARD 链上进行的。而链（Chain）的选择
+则依赖于后续的处理工作。我们可以根据下面这张 RouterOS QoS Packet Flow
+图来决定选择在哪个链上进行标记工作。
+
+[[./images/QoS_Packet_Flow.gif]]
+
+如果我们需要在 Global-In 或者 Global-Total 环节进行流量控制，那么
+Prerouting 链就是我们唯一可以进行标记的地方。而如果我们需要在
+Out-Interface HTB 这个环节进行流量控制，那么在此之前的 Prerouting /
+Forward / Postrouting 都可以作为进行包标记的地方。而其中 Forward 又是一
+个绝佳的地点，因为在这里可以同时对 =in-interface= 和 =out-interface= 进
+行过滤判断。
+
+最后，让我们回到最初的例子上来。请注意看例子中的 =passthrough= 参数。这
+个参数决定了当规则匹配的时候是否继续尝试匹配下一条规则。如果
+=passthrough=yes= 那么当当前规则匹配并且 packet-mark 被设置好后，系统还
+会进行后续的匹配。这时如果出现匹配项并且又重新设置了新的=packet-mark=
+原来的 =packet-mark= 将会被覆盖掉。因此，我们需要根据实际情况合理的设置
+=passthrough= 以使规则清晰简单。
+
+** 流量控制 (Traffic Shape)
+
+ROS 提供了多种流量控制的方法。这里仅仅介绍通过 HTB 进行控制的方法
+
+*** HTB (Hierarchical Token Bucket) 基本概念
+
+HTB 以树的方式对可用带宽进行逐级分配。同时 HTB 允许为叶子节点指定优先级，
+通过优先级比例进行合理的带宽分配。下面我们通过一个 [[http://wiki.mikrotik.com/wiki/Manual:HTB][Mikrotik Wiki]] 中的例
+子来详细说明 HTB 的配置方法，
+
+#+ATTR_HTML: width=480 align="center"
+
+[[./images/HTB_Example1.png]]
+
+HTB 配置中 =max-limit= 和 =limit-at= 是两个关键参数。 =max-limit= 给出
+了最大可用带宽，也就是最好情况下该队列（Queue）可使用的带宽。
+=limit-at= 给出了一个保证带宽，也就是最差情况下也会努力保证这个带宽可用。
+
+每一个 HTB 队列都通过 =parent= 与其他的 HTB 队列关联起来，形成层级
+(Hierarchical)关系。一个 HTB Queue 所使用的最大带宽不会超过其父节点的可
+用带宽。
+
+ROS 系统会尽量确保每个叶子节点 =limit-at= 得到满足。上面这个例子最终的
+效果是，
+
+- Queue03 得到 6Mbps 带宽
+- Queue04 得到 2Mbps 带宽
+- Queue05 得到 2Mbps 带宽
+
+再来看一个例子，
+
+#+ATTR_HTML: width=480 align="center"
+[[./images/HTB_Example2.png]]
+
+与第一个例子不同，这个 HTB 配置中 Queue04 会得到 6Mbps 的带宽（第一个例
+子中是 2Mpbs）。其原因在于，Queue04 的优先级 (Priority) 高于另外两个队
+列。当各个队列的 =limit-at= 被满足后，带宽会优先分配给 Queue04。
+
+这里请注意：优先级高的队列得到额外带宽的前提是所有的 =limit-at= 都已经
+被满足。请看下面这个例子，
+
+#+ATTR_HTML: width=480 align="center"
+[[./images/HTB_Example3.png]]
+
+这个例子中，三个叶节点的带宽分别是，
+
+- Queue03 :: 2Mbps
+- Queue04 :: 6Mbps
+- Queue05 :: 2Mbps
+
+虽然 Queue03 具有最高的优先级，但是 Queue04 会得到额外的带宽。其原因就
+在于 Queue02 的 8Mbps =limit-at= 必须先被满足。一旦这个条件满足，
+Queue03 就只可以使用 2Mbps 的带宽了。而 Queue04 和 Queue05 中，Queue04
+的优先级更高，因此可以使用 Queue02 剩余的带宽。
+
+这里要特别注意，优先级 (Priority) 仅仅对叶子节点起作用。内部节点
+(Inner Queue) 没有优先级的概念。
+
+那么如果 =limit-at= 的总和大于 =max-limit= 会出现什么情况呢？请看这个 HTB
+配置，
+
+#+ATTR_HTML: width=480 align="center"
+[[./images/HTB_Example4.png]]
+
+在这个配置中三个叶节点的带宽是，
+
+- Queue03 :: ~3Mbps
+- Queue04 :: ~1Mbps
+- Queue05 :: ~6Mbps
+
+其原因是为了满足所有的 =limit-at= 条件需要 20Mbps 的带宽，然而我们的最大
+带宽只有 10Mbps 。这时 ROS 会进行等比例缩小。由于 Queue03-05 的
+limit-at 的比例是 6:2:12 也就是 3:1:6，ROS 会按照这个比例分配最大带宽
+来满足 =limit-at= 。
+
+*** 把被标记的包放入 HTB 进行控制
+
+这里我们将把包标记（Packet Marking）和 HTB 结合起来。对 HTB 队列设置
+packet-mark 参数，可以把具有该标记的包放入对应的 HTB 队列中，从而达到
+流量控制的目的。例如：
+
+#+BEGIN_EXAMPLE
+/queue tree
+add limit-at=0 max-limit=8M name=queue-out-inet packet-mark="" parent=ether1-gateway priority=8
+add limit-at=500k max-limit=8M name=queue-out-admin packet-mark=packet-out-inet-admin parent=queue-out-inet priority=2
+add limit-at=3500k max-limit=8M name=queue-out-workstation packet-mark=packet-out-inet parent=queue-out-inet priority=6
+#+END_EXAMPLE
+
+通过上面的配置，我们把带有 packet-out-inet-admin 标记的包放入
+queue-out-admin 队列中，把带有 packet-out-inet 的包放入
+queue-out-workstation 中。根据队列的配置，我们会保证 queue-out-admin 有
+至少 500k 的带宽。并且可以优先使用剩余带宽。
+
+*** 区分上传和下载流量
+
+在前面那张 QoS Packet Flow 图中我们可以看到 HTB 只能被用于包离开一个接
+口的时候，也就是只能作用于 out-interface 上。并且 HTB 也只能对单方向的
+流量进行控制。因此，为了实现对上传的流量控制，我们需要把上传相关的HTB
+挂在出口接口上。例如：使用 ADSL 上网时，我们的出口接口是pppoe-out1，那
+么就要把上传相关的第一个队列的 =parent= 设置为 pppoe-out1 。相应的，如
+果 ether1 是连接局域网的接口，那么控制下载流量的队列的 parent 就应该设
+置为 ether1。
+
+
+
+
+
+
+
+
+** 实例解析
+
+
+
+* IPv6 配置
+* NTP 配置
+
+#+begin_example
+/system ntp client set enabled=yes mode=unicast primary-ntp=192.43.244.18 secondary-ntp=208.53.158.34
+#+end_example
+
+这里 =mode= 一般选择 =unicast= 。如果你所在的局域网里面有 Broadcast NTP
+的服务也可以将 =mode= 设置为 =broadcast=
+
+* 系统升级
+
+RouterOS 的升级非常方便。把从 [[http://www.mikrotik.com/download.html][官网]] 下载的 =.NPK= 文件放在存储器根目录下，
+然后重启路由器就会自动升级了。重启的指令是，
+#+begin_example
+/system reboot
+#+end_example
+
+* 系统安全
+默认情况下，为了方便管理员配置ROS，默认端口上开启了telnet,ftp,ssh,www等服务。
+一旦ROS连接到公网后，经常会碰到有坏人在扫描这些标准端口。
+所以一定要关闭不必要的服务，并且把必须的端口迁移到非标准端口上去。
+
+默认情况如下：
+#+begin_example
+/ip service print
+Flags: X - disabled, I - invalid
+     NAME               PORT ADDRESS                                                  CERTIFICATE
+ 0   telnet               23
+ 1   ftp                  21
+ 2   www                  80
+ 3   ssh                  22
+ 4 X www-ssl             443                                                          none
+ 5 X api                8728
+ 6   winbox             8291
+#+end_example
+
+如果想关闭某项服务，命令是：
+#+begin_example
+/ip service disable service_name
+#+end_example
+
+如果想修改某项服务的端口，命令是：
+#+begin_example
+/ip service set service_name port=port_number
+#+end_example
+
+还可以限制某项服务可访问的IP地址来源，命令是：
+#+begin_example
+/ip service set service_name address=ip_prefix
+#+end_example
+以上的 ip\_prefix 指的是象 3.3.3.0/24这样的东西。

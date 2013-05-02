@@ -1,0 +1,238 @@
+* {
+}
+body {
+/*
+  font-family: Helvetica,Verdana,"BitStream vera Sans",Tahoma,Sans-serif;
+*/
+  font-size: medium;
+  color: #333;
+  line-height: 1em;
+}
+/*
+h1,h2,h3,h4,h5,h6 {
+  font-family: Times, Serif;
+}
+*/
+div#titlebar {
+  border-bottom: 1px dashed #bf9973;
+  padding: 10px 8px 2px 8px;
+  background-color: #f2c191;
+}
+div#title_pre, div#title_text, #title_post {
+  display: inline;
+}
+div#searchbox {
+  float: right;
+}
+div#searchbox ul {
+  margin: 0;
+  padding: 0 8px;
+}
+div#searchbox li {
+  display: inline-block;
+}
+input#query {
+  width: 100px;
+  outline: none;
+  border: 1px solid #ccc;
+  padding: 2px 2px 3px 2px;
+}
+div#actions {
+  float: right;
+}
+div#actions ul {
+  margin: 0;
+  padding: 2px 8px;
+}
+div#actions li {
+  display: inline;
+}
+div#title_separator {
+  clear: both;
+}
+div#insides {
+  margin-top: 1.5em;
+}
+div#sidebar {
+  position: absolute;
+  font-family: Helvetica,Verdana,"BitStream vera Sans",Tahoma,Sans-serif;
+  font-size: small;
+  background-color: #f2f2e6;
+  margin-top: 4em;
+  padding: .5em;
+  width: 190px;
+  max-width: 190px;
+  border: 1px solid #ccc;
+}
+div#sidebar div {
+  margin-bottom: 1.25em;
+}
+div#sidebar label {
+  font-weight: bold;
+  border-bottom: 1px solid #333;
+  display: block;
+}
+div#sidebar ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+div#sidebar li {
+  padding: 0.5em 0.5em 0.25em;
+}
+div#recent a {
+  text-decoration: none;
+}
+div#preamble {
+  margin: 0 -.5em 0 -2.25em;
+}
+div#contents {
+  margin: 0 1.5em 1em 240px;
+  padding: 0 .5em;
+}
+h1#title {
+  color: #802929;
+  border-bottom: 2px solid #333;
+  padding: 0 .25em;
+  margin: 0 0 1em .75em;
+  line-height: 1.5em;
+  clear: left;
+}
+h1#title span.subtitle {
+  font-size: 0.45em;
+  font-weight: normal;
+  margin-top: 2em;
+  line-height: 1.5em;
+  float: right;
+  color: #999;
+}
+h1#title span.subtitle span{
+  text-align: right;
+  display: block;
+}
+h1.title { display: none; }
+h2 {
+/*  background-color: #f2ece6; */
+  border-top: 1px solid #bfbfb6;
+  background-color: #e6e6da;
+  padding: .25em .25em;
+  margin-left: -.25em;
+  color: #333;
+  margin-top: 1.5em;
+}
+h3 {
+  color: #805629;
+}
+div#table-of-contents {
+  font-family: Helvetica,Verdana,"BitStream vera Sans",Tahoma,Sans-serif;
+  font-size: small;
+  line-height: 1em;
+}
+div#table-of-contents h2 {
+  display: none;
+}
+div#table-of-contents ul {
+  list-style: none;
+  margin: 0;
+  padding-left: 1.5em;
+}
+div#table-of-contents a {
+  text-decoration: none;
+}
+div#table-of-contents li {
+  padding: 0.5em 0.5em 0.25em;
+}
+div#comments {
+  margin: 1em 0;
+  font-family: Helvetica,Verdana,"BitStream vera Sans",Tahoma,Sans-serif;
+  font-size: small;
+  background-color: #f2f2e6;
+  border: 1px solid #bfbfb6;
+  padding: .5em;
+}
+div#dsq-content {
+  padding: 0 2.5em;
+}
+a {
+  color: #295480;
+  text-decoration: none;
+}
+a:visited {
+  color: #295480;
+}
+a:hover {
+  color: white;
+  background-color: #295480;
+}
+a:hover img {
+  background-color: white;
+}
+h3 a {
+  text-decoration: underline;
+}
+h3 span.timestamp {
+  color: #802929;
+  font-size: small;
+  font-family: Helvetica,Verdana,"BitStream vera Sans",Tahoma,Sans-serif;
+  float: right;
+  display: block;
+  font-weight: normal;
+}
+div#content {
+  line-height: 2em;
+}
+div#content img.frm {
+  border: 1px solid #eeeeec;;
+  padding: 4px;
+  -moz-box-shadow: 4px 4px 3px #888;
+  -webkit-box-shadow: 4px 4px 3px #888;
+  box-shadow: 4px 4px 3px #888;
+}
+div#content dl {
+  margin: 0 1.5em;
+  line-height: 1.5em;
+}
+div#content dt {
+  color: #000;
+  font-weight: bold;
+  padding: 0;
+}
+div#content dd {
+  margin: 0 0 1em 0 ;
+  padding: 0 0 0 16px;
+  background: url(http://static.linuxnote.net/img/bullets/arrow01.gif) no-repeat 0 .25em;
+}
+div#footnotes {
+  border: 1px solid #FCEEC1;
+  background-color: #FDF5D9;
+  padding: .5em;
+}
+h2.footnotes {
+  background-color: transparent;
+  border: 0;
+  margin: 0;
+  display:none;
+}
+div#text-footnotes {
+  margin: 0 1.5em;
+}
+div#powered-by ul {
+  margin: .5em 0;
+}
+div#powered-by li {
+  display: inline;
+}
+div#powered-by a:hover {
+  background-color: transparent;
+}
+div#ipv6_enabled_www_test_logo { width: 148px; margin: 0 auto; text-align: center; }
+
+div.figure p {
+  text-align: center;
+  font-size: 0.8em;
+  line-height: 1.5em;
+  margin: 0;
+}
+div.figure {
+  margin-bottom: 1.5em;
+}

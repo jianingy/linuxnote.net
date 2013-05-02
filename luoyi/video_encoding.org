@@ -1,0 +1,10 @@
+#+TITLE: Video Encoding
+#+AUTHOR: Luo Yi
+#+EMAIL: luoyi.ly@gmail.com
+
+* Useful Links
+
++ [[http://ffmpeg.org/trac/ffmpeg/wiki/x264EncodingGuide][ffmpeg x264 guide]]
++ [[https://sites.google.com/site/linuxencoding/x264-ffmpeg-mapping][ffmpeg x264]]
++ [[http://li5.ziti.uni-heidelberg.de/x264gpu/][x264gpu]]
++ [[http://www.extremetech.com/computing/128681-the-wretched-state-of-gpu-transcoding][gpu encoding 现状]]

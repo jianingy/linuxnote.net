@@ -1,0 +1,31 @@
+#+TITLE: Miscellaneous Emacs Tricks
+#+AUTHOR: Jianing YANG
+#+EMAIL: jianingy.yang@gmail.com
+#+OPTIONS: H:3 num:nil toc:t \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+
+* Ansi-Term
+
+** Copy & Paste in Ansi-term mode
+
+1. Press C-c C-j to enter line-mode
+2. Use normal Emacs shortcuts
+3. Press C-c C-k to get back to char-mode
+
+
+
+* Troubleshootings
+
+** ERC & linum-mode
+
+The ERC mode shipped with Emacs 23.3 has some conflicts with linum-mode. It
+cause 100% CPU whenever I use '/join' or '/query'. One solution is to turn off
+linum-mode in ERC. The configuration is,
+
+#+begin_src emacs-lisp
+(global-linum-mode nil)
+(setq linum-disabled-modes-list
+      '(term-mode eshell-mode wl-summary-mode compilation-mode erc-mode))
+(defun linum-on ()
+  (unless (or (minibufferp) (member major-mode linum-disabled-modes-list))
+    (linum-mode 1)))
+#+end_src

@@ -1,0 +1,71 @@
+#+TITLE: 败家装备
+#+AUTHOR: Luo Yi <luoyi.ly AT gmail.com>
+
+* Iomega home media cloud edition
+
+** 系统信息
+
+#+begin_src sh
+
+root@hmnhd-TI2JWX:/# cat /proc/cpuinfo
+Processor	: ARMv6-compatible processor rev 5 (v6l)
+processor	: 0
+BogoMIPS	: 239.20
+
+processor	: 1
+BogoMIPS	: 239.20
+
+Features	: swp half thumb fastmult edsp java
+CPU implementer	: 0x41
+CPU architecture: 7
+CPU variant	: 0x0
+CPU part	: 0xb02
+CPU revision	: 5
+
+Hardware	: Oxsemi NAS
+Revision	: 0000
+Serial		: 0000000000000000
+root@hmnhd-TI2JWX:/# df -h
+Filesystem            Size  Used Avail Use% Mounted on
+rootfs                 50M  2.1M   48M   5% /
+/dev/root.old         6.5M  2.6M  4.0M  39% /initrd
+none                   50M  2.1M   48M   5% /
+/dev/md0_vg/BFDlv     4.0G  443M  3.4G  12% /boot
+/dev/loop0            426M  418M  7.6M  99% /mnt/apps
+/dev/loop1            4.9M  2.2M  2.5M  46% /etc
+/dev/loop2             76K   76K     0 100% /oem
+tmpfs                 125M     0  125M   0% /mnt/apps/lib/init/rw
+tmpfs                 125M     0  125M   0% /dev/shm
+/dev/mapper/md0_vg-vol1
+                       16G  658M   16G   5% /mnt/system
+/dev/mapper/2f06726a_vg-lv685ecc0
+                      1.8T   31G  1.8T   2% /mnt/pools/A/A0
+root@hmnhd-TI2JWX:/# free -m
+             total       used       free     shared    buffers     cached
+Mem:           249        221         27          0          4        135
+-/+ buffers/cache:         82        167
+Swap:          511          0        511
+root@hmnhd-TI2JWX:/#
+
+#+end_src
+
+** 免密码 SSH 登录
+
+特别是第一条，特别重要
+
+#+begin_src sh
+chmod go-w ~/
+chmod 700 ~/.ssh
+chmod 600 ~/.ssh/authorized_keys
+#+end_src
+
+** MediaTomb 开启方法
+
+用 OptWare 装
+
+#+begin_src sh
+root@hmnhd-TI2JWX:/opt# /opt/etc/init.d/S90mediatomb  start
+Shutting down mediatomb: failed
+Starting mediatomb: ok
+#+end_src
+

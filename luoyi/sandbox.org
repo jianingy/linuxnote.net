@@ -1,0 +1,336 @@
+#+TITLE: Python
+#+AUTHOR: Jianing YANG
+#+EMAIL: jianingy.yang@gmail.com
+#+OPTIONS: H:3 num:nil toc:t \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+
+* Syntax Tricks
+
+** Emulation of Ternary Operator
+
+The following example demstrates how to present a ternary operator using a tuple.
+
+#+begin_src python
+val = float(raw_input("Age: "))
+status = ("working","retired")[val>65]
+print "You should be", status
+#+end_src
+
+** Matching and assigning match object in one if statement
+  :PROPERTIES:
+  :ID:       o2b:CAB22F64-9BBA-43F1-9A15-88B28343A693
+  :POST_DATE: [2011-08-20 Sat 12:06]
+  :POSTID:   879
+  :CATEGORY: Python Programming
+  :END:
+
+I guess that many people are more or less uncomfortable with python's
+"two-lines" regex matching,
+
+#+begin_src python
+
+# one line for getting match object
+match = re.match("\w+", text)
+# another line for testing
+if match:
+   # do something
+   pass
+
+#+end_src
+
+Of course, I am one of them and I've tried many solutions available on
+the Internet. But most of these solutions somehow add an extra class
+which it's not neat enough as I thought.
+
+By reading an interesting [[http://p-nand-q.com/python/stupid_lambda_tricks.html][post]] about lambda function, I finally found a
+succinct way to that,
+
+#+begin_src python
+
+import re
+
+# only needs an extra lambda function (virtually, there are two)
+match = lambda r, s: (
+        lambda m=re.match(r, s):
+                m and setattr(match, 'found', m.groups()) == None)()
+
+text = """include macbook local/etc/ssh_config
+install macbook .ssh/config local/etc/ssh_config"""
+
+for line in text.splitlines():
+    if match("include\s+([^ ]+)\s+(.+)", line):
+        print match.found
+    if match("install\s+([^ ]+)\s+([^ ]+)\s+(.+)", line):
+        print match.found
+
+#+end_src
+
+Here are the features,
+
+- Test and assignment in one statement
+- Accessing last match object right after IF statement
+- Comparing to using WITH statement, it won't ignore exceptions inside IF blocks
+- No extra variables for users
+- More readable code (except the "match" function itself :P)
+
+* Functions
+** The 'defaultdict'
+
+The following redundant code can be optimized by 'collections.defaultdict' in Python's Standard Library.
+
+#+begin_src python
+d = {}
+for k, v in something:
+  if k not in d:
+    k = [v]
+  else:
+    k.append(v)
+#+end_src
+
+By using 'collections.defaultdict', the above can be written as
+
+#+begin_src python
+from collections import defaultdict
+d = defaultdict()
+for k, v in something:
+  k.append(v)
+#+end_src
+
+** The 'zip' function
+
+One can iterate two list with only one loop by taking the advantage of 'zip' function, like
+
+#+begin_src python
+>>> questions = ['name', 'quest', 'favorite color']
+>>> answers = ['lancelot', 'the holy grail', 'blue']
+>>> for q, a in zip(questions, answers):
+...     print 'What is your {0}?  It is {1}.'.format(q, a)
+...
+#+end_src
+
+The output would be,
+
+#+begin_src python
+What is your name?  It is lancelot.
+What is your quest?  It is the holy grail.
+What is your favorite color?  It is blue.
+#+end_src
+
+** The 'reversed' function
+
+It is unnecessary to 'reverse' a list for the sake of iterating it reversely.
+One could just use its __reverse__ iterator by using 'reversed' function, for
+example,
+
+#+begin_src python
+a = [1, 2, 3, 4]
+for i in reserved(a):
+  print i
+#+end_src
+
+* Object-Oriented Programming
+
+** Demostration on the inheritance of Python
+
+The following code snippet demostrates the mechanism of Python's new-style
+classes. When using 'super' in an overridden method, the methods of ancestors
+would be invoked according to the rule 'Deep First, Left First'.
+
+#+begin_src python
+#!/usr/bin/env python2.7
+
+class Mammal(object):
+
+    def __init__(self, name='mammal', food='unknow'):
+        self.name = name
+        self.food = food
+        print 'mammal.__init__ called'
+
+    def eat(self):
+        print "What should I eat?"
+
+    def sleep(self):
+        print "Where should I sleep?"
+
+class Carnivore(Mammal):
+
+    def __init__(self, name='carnivore', food='meat'):
+        print 'carnivore.__init__ called'
+        self.name = name
+        super(Carnivore, self).__init__(name)
+        self.food = food
+
+    def eat(self):
+        print "Fresh meat!"
+        super(Carnivore, self).eat()
+
+    def sleep(self):
+        print "I'd like to sleep on meat"
+
+class Herbovore(Mammal):
+
+    def __init__(self, name='herbovore', food='grass'):
+        print 'herbovore.__init__ called'
+        self.name = name
+        super(Herbovore, self).__init__(name)
+        self.food = food
+
+    def eat(self):
+        print "Stem Free!"
+        super(Herbovore, self).eat()
+
+    def sleep(self):
+        print "I'd like to sleep on grass"
+
+class Omnivore(Carnivore, Herbovore):
+
+    def __init__(self, name='omnivore', food='pizza'):
+        print 'omnivore.__init__ called'
+        self.name = name
+        super(Omnivore, self).__init__(name)
+        self.food = food
+
+    def eat(self):
+        super(Omnivore, self).eat()
+
+class OmnivoreAlt(Herbovore, Carnivore):
+
+    def __init__(self, name='omnivore', food='pizza'):
+        print 'omnivore.__init__ called'
+        self.name = name
+        super(OmnivoreAlt, self).__init__(name)
+        self.food = food
+
+    def eat(self):
+        super(OmnivoreAlt, self).eat()
+
+if __name__ == '__main__':
+    omnivore = Omnivore('twj')
+    omnivore.eat()
+    omnivore.sleep()
+    print "name = ", omnivore.name, "food = ", omnivore.food
+    print '=' * 78
+    omnivore_alt = OmnivoreAlt('twj')
+    omnivore_alt.eat()
+    omnivore_alt.sleep()
+    print "name = ", omnivore_alt.name, "food = ", omnivore_alt.food
+#+end_src
+
+The result would be
+
+#+begin_src python
+omnivore.__init__ called
+carnivore.__init__ called
+herbovore.__init__ called
+mammal.__init__ called
+Fresh meat!
+Stem Free!
+What should I eat?
+I'd like to sleep on meat
+name =  mammal food =  pizza
+==============================================================================
+omnivore.__init__ called
+herbovore.__init__ called
+carnivore.__init__ called
+mammal.__init__ called
+Stem Free!
+Fresh meat!
+What should I eat?
+I'd like to sleep on grass
+name =  mammal food =  pizza
+#+end_src
+* Web Programming
+
+** Running Pylons with uwsgi + nginx
+
+*** Compile uwsgi with corresponding python interpreter
+
+By using pip, uwsgi installation can be pretty easy,
+
+#+begin_src python
+source /path/to/my/virtualenv/bin/activate
+pip install uwsgi
+#+end_src
+
+*** Configure nginx
+
+Currently, uwsgi support has already been included in the latest nginx
+release. Therefore, it is not neccessary to recompile nginx. However, if your
+nginx release do not have uwsgi enabled, please refer to
+
+http://projects.unbit.it/uwsgi/wiki/RunOnNginx
+
+
+With an uwsgi enabled nginx, add the following snippet to its configuration
+and then restart the service.
+
+#+begin_src python
+location / {
+  root  /path/to/your/pylons/public
+  include uwsgi_params;
+  uwsgi_param SCRIPT_NAME "";
+  uwsgi_pass unix:///tmp/uwsgi.sock;
+}
+#+end_src
+
+*** Start uwsgi
+
+Run uwsgi in the code directory,
+
+#+begin_src python
+uwsgi -M -s /tmp/uwsgi.sock -C --paste config:/absolute/path/to/development.ini -C -H /path/to/virtualenv
+#+end_src
+
+*** Troubleshooting
+
+Now, you can access your app from nginx port. If there is something problem,
+please check on the following,
+
+- /SCRIPT\_NAME/ was set in nginx configuration :: it doesn't matter what its
+     value is, however, a /SCRIPT\_NAME/ variable must be set.
+
+- File mode of socks file is correct :: If nginx and uwsgi do not run as the same user,
+     make sure the file mode of the socks file allows itself to be
+     read/written by nginx.
+* System Programming
+** Suppress stdout/stderr of subprocess.call
+  :PROPERTIES:
+  :ID:       o2b:70742f54-025e-45e8-8328-15bc450b871f
+  :POST_DATE: [2011-09-14 Wed 16:09]
+  :POSTID:   901
+  :CATEGORY: Python
+  :END:
+
+=subprocess.call= and =subprocess.check_call= are very handy tools for
+running shell commands and retreiving return code. But, it is a little
+bit obscure to suppress the output of the command they invoked. A
+common mistake is calling =subprocess.call= with arguments
+=stderr=None= and =stdout=None=. It turns out that =None=, here, means
+no redirection at all. Therefore, the output of a command can still be
+displayed on the screen. According to the [[http://docs.python.org/library/subprocess.html][document]], the right way is
+to pass a file object which represents =/dev/null= as the =stdout= and
+=stderr= arguments. For example,
+
+#+begin_src python
+
+def get_console_method(host):
+    null = open(os.devnull, 'w')
+    if call(["nc", "-w", str(check_timeout), "-z", host, "23"],
+            stderr=null, stdout=null) == 0:
+        return "telnet"
+    elif call(["nc", "-w", str(check_timeout), "-z", host, "22"],
+              stderr=null, stdout=null) == 0:
+        return "ssh"
+    else:
+        raise FatalError("can not determine console method " \
+                         "(neither telnet or ssh)")
+
+#+end_src
+
+#+begin_src perl
+
+#!/usr/bin/env perl -w
+use strict;
+use utf8;
+print "goodbye, world\n";
+
+#+end_src

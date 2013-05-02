@@ -1,0 +1,54 @@
+#+TITLE: Linux System
+#+OPTIONS: H:3 num:nil toc:t \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+#+LINK_HOME: index.html
+
+* Serial Console Configuration
+
+** Find serial ports
+
+Before start to set up a serial console for a linux system, we need to find
+out how many serial ports on the system. For example,
+
+
+#+begin_example
+$ dmesg | grep serial
+[ 54.831740] serial8250: ttyS0 at I/O 0×3f8 (irq = 4) is a 16550A
+[ 54.853271] serial8250: ttyS1 at I/O 0×2f8 (irq = 3) is a 16550A
+#+end_example
+
+If there is USB-to-COM device on the system, its device name would be
+'ttyUSB0'.
+
+** TODO Configuration
+
+* NFS Uniterruptible Process
+
+One day one of our NFS servers went down for some hardware reasons. It caused
+another server with mounted partitions of that NFS server to generate many
+processes in the 'D' state which means Uninterruptible State. I tried to kill
+them even with the '-KILL' option. However, none of them had been killed.
+Apparently, those processes had been trapped into the kernel space and neither
+of them would response to any signal. I checked the server with =ps= command
+and got the following response,
+
+#+begin_example
+[jianingy(0)@xxxxxx ~]$ ps ax -o pid,wchan,s,command | grep df$
+3505 rpc_ex D df
+3844 rpc_ex D df
+4162 rpc_ex D df
+
+[jianingy(0)@xxxxxx ~]$ pstree
+init─┬─acpid
+     ├─agetty
+     ├─atd
+     ├─crond
+     ├─dbus-daemon-1
+     ├─3*[df]
+...
+#+end_example
+
+All =df= processes were hanging at the =rpc_execute= call and all of them were
+trapped into 'D' state. Consequently, none could handle signals, which
+means that even 'kill -9' becomes useless.
+
+

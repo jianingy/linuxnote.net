@@ -1,0 +1,293 @@
+#+TITLE:     SQUID 实现七层路由
+#+AUTHOR:    Jianing Yang
+#+EMAIL:     jianingy.yang AT gmail DOT com
+#+DATE:      2012-08-14 Tue
+#+DESCRIPTION:
+#+KEYWORDS:
+#+LANGUAGE:  en
+#+OPTIONS:   H:3 num:t toc:t \n:nil @:t ::t |:t ^:nil -:t f:t *:t <:t
+#+OPTIONS:   TeX:t LaTeX:t skip:nil d:nil todo:t pri:nil tags:not-in-toc
+#+INFOJS_OPT: view:nil toc:nil ltoc:t mouse:underline buttons:0 path:http://orgmode.org/org-info.js
+#+EXPORT_SELECT_TAGS: export
+#+EXPORT_EXCLUDE_TAGS: noexport
+#+LINK_UP:
+#+LINK_HOME:
+#+XSLT:
+
+这里所谓的“七层路由”实际上是根据访问的域名选择不同的出口服务器。
+
+我们在实际生产生活中经常会遇到有些网站不能访问的情况，例如：6pm.com 这
+类网购网站。这主要是由于美帝国主义惧怕我们惊人的购买力所造成的。然而，
+通过购买国外的 VPS 服务我们可以让某些特定域名的流量通过 VPS 输出，从而
+挫败基于 IP 的访问控制策略。
+
+在这套“路由”系统中，有两类角色 ---“端点”和“路由节点”。端点就是位于海外
+的 VPS，其 IP 地址不在对方的访问控制中。“路由节点”就是我们局域网的服务
+器，这台服务器虽然 IP 被对方屏蔽，但是仍可以连接端点服务器。
+
+下面介绍如何让路由节点根据域名来让特定的访问经过端点到达目标从而绕过
+IP 访问控制。
+
+
+* 端点的 SQUID 配置
+
+端点上的 SQUID 不需要什么特殊配置，默认即可。这里给出一个简单的例子，
+
+#+BEGIN_EXAMPLE
+acl all src 0.0.0.0/0.0.0.0
+acl manager proto cache_object
+acl virtualnet0 src 192.168.0.0/255.255.0.0
+acl localhost src 127.0.0.1/255.255.255.255
+acl to_localhost dst 127.0.0.0/8
+acl public_cache port 80
+acl SSL_ports port 443
+acl Safe_ports port 80		# http
+acl Safe_ports port 21		# ftp
+acl Safe_ports port 443		# https
+acl Safe_ports port 70		# gopher
+acl Safe_ports port 210		# wais
+acl Safe_ports port 1025-65535	# unregistered ports
+acl Safe_ports port 280		# http-mgmt
+acl Safe_ports port 488		# gss-http
+acl Safe_ports port 591		# filemaker
+acl Safe_ports port 777		# multiling http
+acl CONNECT method CONNECT
+acl PURGE method PURGE
+
+http_access allow manager localhost
+http_access allow PURGE localhost
+http_access deny manager
+http_access deny !Safe_ports
+http_access deny CONNECT !SSL_ports
+http_access allow localhost
+http_access allow virtualnet0
+http_access allow public_cache
+http_access deny all
+
+icp_access allow localhost
+icp_access allow virtualnet0
+icp_access deny all
+
+http_port 192.168.0.1:3128
+hierarchy_stoplist cgi-bin ?
+cache_mem 32 MB
+maximum_object_size_in_memory 8 MB
+cache_dir ufs /var/spool/squid 4096 16 256
+access_log none
+cache_log /dev/null
+cache_store_log none
+acl QUERY urlpath_regex cgi-bin \?
+cache deny QUERY
+refresh_pattern ^ftp:		1440	20%	10080
+refresh_pattern ^gopher:	1440	0%	1440
+refresh_pattern -i (/cgi-bin/|\?) 0    0%      0
+refresh_pattern .		0	20%	4320
+via off
+acl apache rep_header Server ^Apache
+broken_vary_encoding allow apache
+cache_mgr nobody
+visible_hostname squid01.linuxnote.net
+icp_port 3130
+forwarded_for off
+coredump_dir /var/spool/squid
+#+END_EXAMPLE
+
+配置完成后，启动 squid 服务并且检查 3128 端口是否通畅。
+
+* 路由节点的 SQUID 配置
+
+路由节点根据访问域名的不同选择不同的端点进行访问。与端点不同，路由节点
+需要增加如下配置，
+
+#+BEGIN_EXAMPLE
+
+# 需要通过端点访问的域名列表
+acl proxy_domains dstdomain "/etc/squid/proxy-domains"
+
+# 配置两个端点服务器为路由节点的上层服务器
+cache_peer 192.168.1.1 parent 3128 3130 no-query default
+cache_peer 192.168.1.2 parent 3128 3130 no-query
+
+# 访问控制
+cache_peer_access 192.168.1.1 allow proxy_domains
+cache_peer_access 192.168.1.2 allow proxy_domains
+
+# 对于域名列表中的域名，绝不从路由节点直接访问。改列表中的域名都必须经
+# 由端点进行访问
+always_direct deny proxy_domains
+always_direct allow all
+never_direct allow proxy_domains
+
+#+END_EXAMPLE
+
+
+在 =proxy-domains= 里面只需要按行列举出域名即可，例如:
+
+#+BEGIN_EXAMPLE
+.google.com
+.googleusercontent.com
+#+END_EXAMPLE
+
+
+最后给出一个完整的路由节点的 SQUID 配置，
+
+#+BEGIN_EXAMPLE
+http_port 3128 transparent
+
+dns_nameservers 127.0.0.1
+visible_hostname squid.corp.linuxnote.net
+
+#
+# Recommended minimum configuration:
+#
+acl manager proto cache_object
+acl localhost src 127.0.0.1/32 ::1
+acl to_localhost dst 127.0.0.0/8 0.0.0.0/32 ::1
+
+# Example rule allowing access from your local networks.
+# Adapt to list your (internal) IP networks from where browsing
+# should be allowed
+
+acl localnet src 10.0.0.0/8	# RFC1918 possible internal network
+acl localnet src 172.16.0.0/12	# RFC1918 possible internal network
+acl localnet src 192.168.0.0/16	# RFC1918 possible internal network
+acl localnet src fc00::/7       # RFC 4193 local private network range
+acl localnet src fe80::/10      # RFC 4291 link-local (directly plugged) machines
+
+acl SSL_ports port 443
+acl Safe_ports port 80		# http
+acl Safe_ports port 21		# ftp
+acl Safe_ports port 443		# https
+acl Safe_ports port 70		# gopher
+acl Safe_ports port 210		# wais
+acl Safe_ports port 1025-65535	# unregistered ports
+acl Safe_ports port 280		# http-mgmt
+acl Safe_ports port 488		# gss-http
+acl Safe_ports port 591		# filemaker
+acl Safe_ports port 777		# multiling http
+acl CONNECT method CONNECT
+
+#
+# Recommended minimum Access Permission configuration:
+#
+# Only allow cachemgr access from localhost
+http_access allow manager localhost
+http_access deny manager
+
+# Deny requests to certain unsafe ports
+http_access deny !Safe_ports
+
+# Deny CONNECT to other than secure SSL ports
+http_access deny CONNECT !SSL_ports
+
+icp_port 3130
+icp_access allow localhost
+icp_access deny all
+
+# We strongly recommend the following be uncommented to protect innocent
+# web applications running on the proxy server who think the only
+# one who can access services on "localhost" is a local user
+#http_access deny to_localhost
+
+#
+# INSERT YOUR OWN RULE(S) HERE TO ALLOW ACCESS FROM YOUR CLIENTS
+#
+
+# Example rule allowing access from your local networks.
+# Adapt localnet in the ACL section to list your (internal) IP networks
+# from where browsing should be allowed
+http_access allow localnet
+http_access allow localhost
+
+# And finally deny all other access to this proxy
+http_access deny all
+
+# Squid normally listens to port 3128
+http_port 3128
+
+# We recommend you to use at least the following line.
+hierarchy_stoplist cgi-bin ?
+
+# Uncomment and adjust the following to add a disk cache directory.
+#cache_dir ufs /var/spool/squid 100 16 256
+
+# Leave coredumps in the first cache dir
+coredump_dir /var/spool/squid
+
+# Add any of your own refresh_pattern entries above these.
+refresh_pattern ^ftp:		1440	20%	10080
+refresh_pattern ^gopher:	1440	0%	1440
+refresh_pattern -i (/cgi-bin/|\?) 0	0%	0
+refresh_pattern .		0	20%	4320
+
+forwarded_for off
+
+cache_mem 1024 MB
+maximum_object_size_in_memory 32 MB
+
+acl proxy_domains dstdomain "/etc/squid/proxy-domains"
+
+acl localnet_dst dst 10.0.0.0/8	# RFC1918 possible internal network
+acl localnet_dst dst 172.16.0.0/12	# RFC1918 possible internal network
+acl localnet_dst dst 192.168.0.0/16	# RFC1918 possible internal network
+
+
+cache_peer 192.168.1.1 parent 3128 3130 no-query default
+cache_peer 192.168.1.2 parent 3128 3130 no-query
+
+cache_peer_access 192.168.1.1 allow proxy_domains
+cache_peer_access 192.168.1.2 allow proxy_domains
+
+cache_mgr jianingy.yang@gmail.com
+
+always_direct deny proxy_domains
+always_direct allow all
+never_direct allow proxy_domains
+
+access_log none
+cache_log /dev/null
+cache_store_log none
+
+#+END_EXAMPLE
+
+* 使用方法
+
+** 设置浏览器代理
+
+你可以把浏览器的代理设置为路由节点。并且不需要经常切换。因为路由节点的
+squid 可以根据域名来决定是否通过端点进行访问。对于不在 =proxy-domains=
+列表中的域名，会进行直接访问。只有在列表中的域名才会通过海外的 VPS 进
+行访问。
+
+** 透明代理
+
+如果路由节点和局域网的路由器是同一台，那么可以通过防火墙规则让局域网用
+户都享受到这种便利，只需要将所有经过路由器的目标为80或者8080端口的流量
+都重定向到SQUID服务器上即可。=iptables= 规则如下，
+
+#+BEGIN_EXAMPLE
+iptables -t nat -A PREROUTING -s 192.168.0.0/24 -p tcp -m multiport --dports 80,8080 -j REDIRECT --to-ports 3128
+#+END_EXAMPLE
+
+** RouterOS 配置
+
+假设 SQUID 的路由节点是 192.168.1.100, SQUID 监听端口是 3128，
+
+#+BEGIN_EXAMPLE
+
+/ip firewall nat add action=redirect chain=dstnat disabled=no \
+                     dst-port=80,8080 in-interface=ether5 protocol=tcp \
+                     src-address=!192.168.1.100 to-ports=3128
+
+/ip proxy set always-from-cache=no cache-administrator=me@gmail.com cache-hit-dscp=4 cache-on-disk=no enabled=yes max-cache-size=none \
+    max-client-connections=600 max-fresh-time=5s max-server-connections=600 parent-proxy=192.168.1.100 parent-proxy-port=3128 port=3128 \
+    serialize-connections=no src-address=0.0.0.0
+
+/ip proxy access
+    add action=allow disabled=no dst-address=0.0.0.0 dst-port=0-65535 src-address=0.0.0.0
+
+#+END_EXAMPLE
+
+* 维护方法
+
+基本上只需要根据自己的需要维护好 =proxy-domains= 这个文件就可以了。

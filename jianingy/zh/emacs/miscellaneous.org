@@ -1,0 +1,151 @@
+#+TITLE: Emacs 配置大杂烩
+#+AUTHOR: Jianing YANG
+#+EMAIL: jianingy.yang@gmail.com
+#+OPTIONS: ^:nil toc:t
+
+* 字体配置
+
+** 在 Linux Emacs 上使用 Monofur 字体
+
+正常的 Monofur 在 Linux 上渲染的过于“消瘦”了，粗体则显得比较饱满适合阅
+读。但 Monofur 本身并不提供粗体字体，这就需要使用 fontconfig 来制造一个
+粗体出来。详细方法请参考：
+
+[[https://wiki.archlinux.org/index.php/Font_Configuration#Create_bold_and_italic_styles_for_incomplete_fonts]]
+
+这里给出一个 =~/.fonts.conf= 里的简单配置：
+
+#+BEGIN_SRC xml
+<match target="font">
+    <test qual="any" name="family">
+        <string>Monofur</string>
+    </test>
+	<test name="weight" compare="more_eq">
+		<int>80</int>
+	</test>
+    <edit name="embolden" mode="assign">
+		<bool>true</bool>
+    </edit>
+</match>
+#+END_SRC
+
+两种字形的显示效果如下，
+
+#+CAPTION: 正常的 Monofur 字体
+[[file:images/monofur-normal.png]]
+
+#+CAPTION: fontconfig加粗后的 Monofur 字体
+[[file:images/monofur-bold.png]]
+
+然而，用粗体作为默认字体后，原本的粗体效果会显得发虚，例如：
+
+#+CAPTION: 被 fontconfig 和 emacs 共同加粗的粗体
+[[file:images/modeline-bold.png]]
+
+我的解决方法是，直接禁用 emacs 的字体加粗功能。方法来自于：
+[[http://stackoverflow.com/questions/2064904/how-to-disable-bold-font-weight-globally-in-emacs]]
+
+#+BEGIN_SRC elisp
+ (mapc
+  (lambda (face)
+    (set-face-attribute face nil :weight 'normal :underline nil))
+  (face-list))
+#+END_SRC
+
+调整后的最终效果如下图，
+
+#+CAPTION: Monofur 最终效果
+
+[[file:images/modeline-normal.png]]
+
+* Org-Mode
+** 表格技巧
+
+*** 对齐
+
+#+BEGIN_EXAMPLE
+| Col 1 | Col 2 | Col 3 |
+| <l>   |       | <r>   |
+#+END_EXAMPLE
+
+=<l>= 表示左对齐，=<r>=表示右对齐。后面跟数字表示列的宽度，例如：
+=<l10>=
+
+如果想在文件打开时自动对齐，需要在文件中加入：
+#+BEGIN_EXAMPLE
+,#+STARTUP: align
+#+END_EXAMPLE
+
+*** HTML 输出
+
+输出成 HTML 时，可以一通过 =ATTR_HTML= 来为表格指定 HTML 属性，例如：
+#+BEGIN_EXAMPLE
+,#+ATTR_HTML: width="100%" rules="all" frame="border"
+#+END_EXAMPLE
+* GNUS
+
+- M-u :: 在Summary列表下清除 "IMPORTNANT" (GNUS术语叫Tick) 标记
+* 自定义初始化信息
+
+scratch buffer 的显示的信息可以通过 =initial-scratch-message= 来配置。
+例如：下面的代码用来把 =~/.motd.el= 的内容做为默认显示信息。
+
+#+BEGIN_SRC elisp
+
+(defun get-string-from-file (filePath)
+  "Return FILEPATH's file content."
+  (with-temp-buffer
+    (insert-file-contents filePath)
+    (buffer-string)))
+
+(if (file-exists-p "~/.motd.el")
+  (setq initial-scratch-message (get-string-from-file "~/.motd.el")))
+
+#+END_SRC
+
+* Tramp 远程编辑
+
+Tramp 远程编辑文件时可能会因为提示符不标准而阻塞住。这个问题可以通过判
+断终端类型来给出不同的提示符来解决。例如：
+
+#+BEGIN_EXAMPLE
+case "$TERM" in
+	dumb) export PS1="\u@\h \$ " ;;
+	*) export PROMPT_COMMAND=_PROMPT ;;
+esac
+#+END_EXAMPLE
+
+本方法的好处在于，即可以保留一个有个性的提示符又能防止其他以提示符作为
+判断条件的脚本阻塞住。
+
+* 响应锁屏信号
+
+#+BEGIN_SRC elisp
+(require 'dbus)
+
+(defun ysl/org-check-in-out-on-screensaver (p-screen-locked)
+  (if p-screen-locked
+      (progn
+        (bh/punch-out)
+        (message "punch-out since screen is locked"))
+    (progn
+      (bh/punch-in 0)
+      (message "punch-in since screen is unlocked"))))
+
+(dbus-register-signal :session "org.gnome.ScreenSaver" "/org/gnome/ScreenSaver"
+                      "org.gnome.ScreenSaver" "ActiveChanged"
+                      'ysl/org-check-in-out-on-screensaver)
+#+END_SRC
+<<<<<<< local
+* 编程技巧
+
+** 左移/右移 代码块
+- C-c < :: 左移，相当与 VIM 的 “<<”
+- C-c > :: 右移，相当与 VIM 的 “>>”
+
+* 程序编译
+
+光标跟随 =*compilation*= 输出内容，
+#+BEGIN_SRC elisp
+(setq compilation-scroll-output t)
+#+END_SRC

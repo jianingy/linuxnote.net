@@ -1,0 +1,34 @@
+#+TITLE: jianingy's page (english version)
+#+AUTHOR: Jianing YANG
+#+EMAIL: jianingy.yang@gmail.com
+
+* Linux
+
+** [[file:linux/bash.org][BaSH]]
+My favorite shell
+** [[file:linux/openssh.org][OpenSSH]]
+Some advanced techniques about OpenSSH, espeically tunnelling.
+
+
+* Emacs
+** [[file:emacs/editing.org][Editing with Emacs]]
+** [[file:emacs/org-mode.org][Org-Mode]]
+** [[file:emacs/presentation.org][Writing Presentation with Emacs]]
+** [[file:emacs/gnus.org][Emacs GNUS (A Mail Client inside Emacs)]]
+** [[file:emacs/org2blog.org][Blog with Org2Blog]]
+** [[file:emacs/others.org][Miscellaneous Emacs Tricks]]
+
+* Programming
+
+** [[file:prog/python.org][Python]]
+
+Python is a great programming language, powerful and easy to use. Most
+of my maintainence script are written in Python
+* Tricks
+[[file:linux/a-fast-way-to-remove-huge-number-of-files.org][A faster way to delete millions of files in a directory]]
+* Drafts
+
+** [[file:drafts/wmfs.org][WMFS (A Window Manager From Scratch)]]
+My current window manager.
+
+** [[file:drafts/network-notes.org][Network]]

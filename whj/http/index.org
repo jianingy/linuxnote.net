@@ -1,0 +1,8 @@
+#+TITLE: Whj's http homepage 
+#+AUTHOR: Whj
+#+EMAIL: wfast888@hotmail.com
+
+
+* HTTP 
+HTTP基础
+

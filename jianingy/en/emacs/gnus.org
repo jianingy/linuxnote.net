@@ -1,0 +1,137 @@
+#+TITLE: Emacs GNUS
+#+AUTHOR: Jianing YANG
+#+EMAIL: jianingy.yang@gmail.com
+#+OPTIONS: H:3 num:nil toc:t \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+
+Emacs GNUS is an ancient news client running under Emacs. It is
+originally designed for news reading. But, nowadays, GNUS also has
+support of reading emails and RSS feeds.
+
+After I've learned to handle many work under Emacs like coding,
+blogging and time organizing, I start to become lazy to switch to
+other applications. For me, GNUS gives me an opportunity to quickly
+read my interesting messages without change to another mail or rss
+application.
+
+As I only use basic functions of GNUS, the configuration won't be so
+complicated.
+
+** Configurations
+*** Configure GNUS for reading email from GMail IMAPS
+
+The configuration file of GNUS are located at =~/.gnus.el=. First,
+let's look at IMAPS settings,
+
+#+begin_src emacs-lisp
+(load-library "nnimap")
+(load-library "starttls")
+;; server settings
+(setq gnus-select-method '(nnimap "gmail"
+           (nnimap-address "imap.gmail.com")
+           (nnimap-server-port 993)
+           (nnimap-authinfo-file "~/.imap-authinfo")
+           (nnimap-stream ssl)))
+#+end_src
+
+The above setup GNUS for retrieving GMail mails. Yet, it introduces
+another file =~/.imap-authinfo= for authentication information. The
+file looks like,
+
+#+begin_example
+machine gmail login username password wrongpass port 993
+#+end_example
+
+*** Configure GMail STMP for sending email
+
+This can be done in the =.emacs= file with,
+
+#+begin_src emacs-lisp
+;; mail settings
+(setq smtpmail-default-smtp-server "smtp.gmail.com")
+(require 'smtpmail)
+(setq user-mail-address "username@gmai.com")
+(setq send-mail-function 'smtpmail-send-it
+      mesasge-send-mail-function 'smtpmail-send-it
+      smtpmail-starttls-credentials '(("smtp.gmail.com" 587 nil nil))
+      smtpmail-auth-credentials '(("smtp.gmail.com" 587 "username" nil))
+
+      smtpmail-smtp-server "smtp.gmail.com"
+      smtpmail-smtp-service 587
+
+      smtpmail-local-domain "gmail.com"
+      smtpmail-sendto-domain " gmail.com"
+
+;      smtpmail-debug-info t
+;      smtpmail-debug-verb t
+      )
+#+end_src
+
+If there are problems about sending email, uncomment the last two
+lines to get some debugging information.
+
+*** Configure GNUS for reading usenet news.
+
+Insert a NNTP server into secondary-select-methods,
+
+#+begin_src emacs-lisp
+(add-to-list 'gnus-secondary-select-methods '(nntp "news.cn99.com"))
+#+end_src
+
+** Tips on Reading Mails
+*** Auto-Wrap Long Lines
+
+#+begin_src emacs-lisp
+(setq gnus-treat-fill t)
+#+end_src
+
+*** Get [Gmail] mailboxes Back
+
+COPIED FROM http://www.emacswiki.org/emacs/GnusGmail
+
+#+begin_src emacs-lisp
+(setq gnus-ignored-newsgroups "^to\\.\\|^[0-9. ]+\\( \\|$\\)\\|^[\"]\"[#'()]")
+#+end_src
+
+*** Sort articles in reversed date order
+
+NOTE: The last sorting function in the list is the primary one while comparing.
+#+begin_src emacs-lisp
+;; sort articles in reverse date
+(setq gnus-article-sort-functions
+      '(gnus-article-sort-by-subject
+        (not gnus-article-sort-by-date)))
+#+end_src
+
+*** View inline images
+
+#+begin_src emacs-lisp
+(add-to-list 'mm-attachment-override-types "image/.*")
+(setq w3m-default-display-inline-images t)
+(setq mm-inline-text-html-with-images t)
+#+end_src
+
+*** Keybindings
+| Buffer      | Command  | Function                                 |
+|-------------+----------+------------------------------------------|
+| ANY         | M-x gnus | start GNUS                               |
+|-------------+----------+------------------------------------------|
+| ~*Groups*~  | A A      | Display all groups                       |
+| ~*Groups*~  | G R      | Subscribe a RSS feed                     |
+| ~*Groups*~  | u        | Subscribe a news group                   |
+| ~*Groups*~  | C-k      | Unsubscribe a news group                 |
+| ~*Groups*~  | C-u SPC  | Enter a news group to view old messages  |
+| ~*Groups*~  | SPC      | Enter a news group only for new messages |
+| ~*Groups*~  | g        | Refresh all groups                       |
+|-------------+----------+------------------------------------------|
+| ~*Summary*~ | n        | Goto next unread message                 |
+| ~*Summary*~ | p        | Goto previous unread message             |
+| ~*Summary*~ | SPC      | Read current message                     |
+| ~*Summary*~ | M C      | Mark all unread articles as read         |
+
+*** Password Security
+
+Most of time, gnus stores mail password in a plain text file
+=~/.authinfo= that is not secure. To save email password securely, use
+GPG to encrypted the =~/.authinfo= and save it as =~/.authinfo.gpg=.
+Then, change the mailbox settings with authinfo file pointed at
+=~/.authinfo.gpg=

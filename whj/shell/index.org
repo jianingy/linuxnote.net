@@ -1,0 +1,8 @@
+#+TITLE: Whj's shell page 
+#+AUTHOR: Whj
+#+EMAIL: wfast888@hotmail.com
+#+OPTIONS: H:2 num:nil toc:t \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+- [[file:../index.org][GO BACK]]
+- [[file:shell_basic.org][Shell Basic]]
+- [[file:shell_script.org][Shell Script]]
+- [[file:shell_shortcuts.org][Shell Shortcuts]]

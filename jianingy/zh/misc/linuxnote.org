@@ -1,0 +1,31 @@
+#+TITLE: linuxnote 编辑方法
+
+* 基本操作
+1. 在 [[bitbucket.org]] 注册账号，通知 =jianingy= 添加权限
+2. 克隆仓库
+   - SSH 方式 :: =git clone git@github.com:jianingy/linuxnote.net=
+   - HTTPS 方式 :: =git clone https://git.github.com/jianingy/linuxnote.net=
+3. 编辑页面
+4. 提交代码
+#+begin_src sh
+git pull origin master # 获取别人的修改
+git add your-new-file # 添加自己的文件
+git commit -m '注释' # 提交自己的文件
+git push origin master # 推送至远端仓库
+#+end_src
+
+** Org文件模板
+#+begin_src org-mode
+,#+TITLE: 标题
+,#+AUTHOR: 作者名字
+,#+EMAIL: 电子邮件
+#+end_src
+
+* FAQ
+
+** 新提交的页面什么时候生成好？
+Git 仓库有一个提交钩子(Hook)，一旦提交马上就会更新 linuxnote.net
+上面的代码。代码更新后，第一次访问会触发页面生成程序。
+
+** 多媒体资源可以提交进入仓库吗？
+目前的发布方式不支持多媒体资源，例如：图片等。请大家使用外链方式解决。

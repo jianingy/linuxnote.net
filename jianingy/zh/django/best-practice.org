@@ -1,0 +1,392 @@
+#+TITLE: Django Best Practice
+#+AUTHOR: Jianing YANG
+#+EMAIL: jianingy.yang@gmail.com
+#+OPTIONS: H:2 num:nil toc:t \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+
+* 通用视图(View)
+** 修改 ListView 的查询逻辑
+
+做一个新模板继承自通用模板，然后重载相应的函数，例如：
+
+#+BEGIN_SRC python
+from django.views.generic import ListView
+from domain.models import DynamicHost
+
+
+class UserDynamicHostView(ListView):
+    def get_queryset(self):
+        return
+    DynamicHost.objects.filter(created_by=self.request.user)
+
+#+END_SRC
+
+** CreateView 的使用方法
+
+首先，使用 =form_class= 和 =model= 来指定创建操作需要的 Form 和 Model。
+如果创建过程中需要动态修改某些值，可以通过重载 =form_valid= 来搞定([[http://stackoverflow.com/questions/5607205/how-can-i-make-a-generic-class-based-create-view-for-a-model][参考
+文章]])。
+
+如果不指定 =form_class= ，CreateView 会使用一个默认的 =form_class= ，
+也就是展现所有可以修改的字段。
+
+#+BEGIN_SRC python
+
+from django.forms import ModelForm
+from django.shortcuts import redirect
+from models import DynamicHost
+from django.views.generic.edit import CreateView
+
+
+class DynamicHostForm(ModelForm):
+    class Meta:
+        model = DynamicHost
+        fields = ('host', 'domain', 'psk')
+
+class DynamicHostCreateView(CreateView):
+
+    form_class = DynamicHostForm
+    model = DynamicHost
+
+    def form_valid(self, form):
+        self.object = form.save(commit=False)
+        self.object.created_by = self.request.user
+        self.object.save()
+        return redirect('list')
+
+#+END_SRC
+
+
+
+
+** 通过 Model 自动生成表单
+
+继承 =django.forms.ModelForm= 类，然后在 =Meta= 子类中进行配置，例如：
+
+#+BEGIN_SRC python
+### views.py
+
+class DynamicHostForm(ModelForm):
+    class Meta:
+        model = DynamicHost
+        fields = ('host', 'domain', 'psk')
+
+def add(request):
+    form = DynamicHostForm()
+    return render_to_response('domain/dynamichost_add.html', {'form': form})
+#+END_SRC
+
+=Meta= 中数据含义如下，
+- model :: 生成表单用的 model
+- fields :: 生成表单中包含的字段。如果不提供，就是全包含
+
+Form 可以用多种方式呈现出来，例如：使用 =<p>= 标签， =<ul>= 标签或者
+=<table>= 标签。例如下面的代码，用 =<p>= 标签展现 form
+#+BEGIN_SRC html
+<form method="post">
+    {{ form.as_p }}
+    <input type="submit" value="Submit" />
+</form>
+#+END_SRC
+
+注意，外面的 =<form>= 标签和"提交”按钮都要自己写 html 。
+
+** 用 django-tables2 制作表格
+
+首先，建立一个表格类。每一个类成员变量表示一列。 =Meta= 中 =fields= 指
+名的字段也会被显示为一列。 =sequence= 表示列展现的顺序。当需要加入自定
+义 HTML 的列时，可以使用 =TemplateColumn= 来指定 HTML 的模板。
+
+#+BEGIN_SRC python
+### tables.py
+
+import django_tables2 as tables
+from models import DynamicHost
+
+
+class DynamicHostTable(tables.Table):
+
+    fqdn = tables.Column()
+    action = tables.TemplateColumn(
+        template_name="domain/dynamichost_table_action.html")
+
+    class Meta:
+        model = DynamicHost
+        fields = ('id', 'record_a', 'record_aaaa')
+        sequence = ('id', 'fqdn', 'record_a', 'record_aaaa', 'action')
+#+END_SRC
+
+表格类建立好后，把它和一个表格视图 (View) 关联起来，
+#+BEGIN_SRC python
+### views.py
+
+from django_tables2 import SingleTableView
+
+
+class DynamicHostTableView(SingleTableView):
+    model = DynamicHost
+    table_class = DynamicHostTable
+
+    def get_queryset(self):
+        base_q = DynamicHost.objects.filter(created_by=self.request.user)
+        return base_q.order_by('id')
+
+list_view = login_required(DynamicHostTableView.as_view())
+#+END_SRC
+
+最后，在相关的模板中展现表格，
+
+#+BEGIN_SRC html
+{% extends "base.html" %}
+{% load django_tables2 %}
+{% block content %}
+    <h2>Your Dynamic Hosts</h2>
+    <a href="{% url create %}"> add a new dynamic host </a>
+    {% render_table table %}
+{% endblock %}
+#+END_SRC
+
+* URL 配置
+** 解耦合 URL 路径配置
+
+在整个项目的 =urls.py= 中 =include= 应用程序的 =urls.py= 。
+#+BEGIN_SRC python
+### project's urls.py
+from django.conf.urls import patterns, include, url
+
+urlpatterns = patterns('',
+    # ...
+    url(r'^app/', include('app.urls')),
+)
+
+### app's urls.py
+from django.conf.urls import patterns, url
+
+urlpatterns = patterns('app.views',
+    url(r'^app/$', 'index'),
+)
+#+END_SRC
+
+** 重定向 URL
+
+通过 =gerneric view= 的 =redirect_to= 方法实现，
+
+#+BEGIN_SRC python
+from django.conf.urls import patterns, include, url
+from django.core.urlresolvers import reverse_lazy
+from django.views.generic.simple import redirect_to
+
+urlpatterns = patterns('',
+    url(r'^$', redirect_to,
+   	    {'url': reverse_lazy('account.views.profile')}),
+    url(r'^accounts/', include('accounts.urls')),
+)
+
+#+END_SRC
+
+* 权限验证及用户相关
+** 制作要求用户登陆的页面
+
+*** 在 URL 路径配置中控制
+
+在 view 外面套用 =login_required= 函数，例如：
+
+#+BEGIN_SRC python
+
+### urls.py
+
+from django.conf.urls import patterns, url
+from django.views.generic import ListView
+from django.contrib.auth.decorators import login_required
+
+list_view = login_required(UserDynamicHostView.as_view())
+
+urlpatterns = patterns('domain.views',
+    url(r'^dynamic/$', list_view),
+)
+
+#+END_SRC
+
+*** 在 View 有函数中配置
+
+加入 =login_required= 修饰符，例如：
+
+#+BEGIN_SRC python
+
+### views.py
+
+from django.contrib.auth.decorators import login_required
+
+@login_required
+def add(request):
+    # ...
+    return render_to_response('domain/dynamichost_add.html', {})
+
+#+END_SRC
+
+** 制作与 User 关联的 Model
+
+直接用 ForeignKey 引用 django 的 User Model 即可，例如：
+
+#+BEGIN_SRC python
+
+### models.py
+
+from django.db import models
+from django.contrib.auth.models import User
+
+
+class DynamicHost(models.Model):
+    created_by = models.ForeignKey(User)
+    # ...
+
+#+END_SRC
+** 扩展 User 能存储的信息
+
+创建一个单独的 Model 用来存储与 User 相关的额外信息。并且要通过
+OneToOneField 加入一个与 User 一一对应的引用字段。
+
+为了每次有一个新的 User 对象时，都能产生一个与之关联的 Model，可以在
+post_save 事件中加入创建其他 Model 的操作。
+
+下面给出一个完整的例子，
+
+#+BEGIN_SRC python
+from django.db import models
+from django.contrib.auth.models import User
+from django.db.models.signals import post_save
+
+class UserProfile(models.Model):
+    user = models.OneToOneField(User)
+    invited_by = models.ForeignKey(User, related_name="invited_by",
+                                      null=True, blank=True)
+    force_change_password = models.BooleanField()
+    description = models.TextField(blank=True, default="")
+
+def create_user_profile(sender, instance, created, **kwargs):
+    # refer to https://docs.djangoproject.com/en/dev/topics/auth/#django.contrib.auth.models.UserManager.create_user
+    if created:
+        UserProfile.objects.create(user=instance)
+
+post_save.connect(create_user_profile, sender=User)
+#+END_SRC
+** 获取当前登陆用户信息
+
+在有 =request= 的上下文中，使用 =request.user=
+
+
+* 数据验证以及数据修正
+** 在用户提交表单后对表单数据进行修改
+
+先用 =form.save(commit=False)= 获取下用户提交的数据。然后操作 =form=。
+最后用 =save()= 方法保存，例如：
+
+#+BEGIN_SRC python
+
+### views.py
+
+    if request.method == 'POST':
+        form = DynamicHostForm(request.POST)
+        if form.is_valid():
+            new_host = form.save(commit=False)
+            new_host.created_by = request.user
+            new_host.save()
+            return HttpResponseRedirect('/thanks/')
+
+#+END_SRC
+
+
+
+* 数据建模
+
+** 自动写入创建时间
+
+#+BEGIN_EXAMPLE
+date = models.DateTimeField(default=datetime.now, blank=True)
+#+END_EXAMPLE
+
+
+** 多字段唯一索引
+
+通过 Meta 里面加入 =unique_together= 来实现。
+
+#+BEGIN_SRC python
+class IPv6Address(models.Model):
+
+    # Basic Information
+    prefix = models.CharField(_('Prefix'), max_length=48,
+                              unique=True, null=False, blank=False)
+    hostid = models.CharField(_('Host ID'), max_length=48,
+                              null=False, blank=False)
+
+
+    class Meta:
+        unique_together = ('prefix', 'hostid')
+
+#+END_SRC
+
+
+** 创建虚 Model
+
+Django 允许我们创建一个用来被其他 Model 继承的虚拟 Model。为了不让
+Django 给这个虚拟 Model 创建对应的数据库表，需要通过 Meta 来声明一个
+Model 为虚拟 Model 。例如：
+
+#+BEGIN_SRC python
+class RecordCustom(models.Model):
+   name = models.CharField(max_length=255)
+   value = models.CharField(max_length=255)
+   ttl = models.CharField(max_length=32)
+   zone = models.ForeignKey(Zone)
+
+   def __unicode__(self):
+       return "%s %s IN %s %s" % (self.name, self.ttl, self.record_type, self.value)
+
+    class Meta:
+        abstract = True
+
+
+class RecordMX(RecordCustom):
+    record_type = 'MX'
+
+    class Meta:
+        verbose_name = 'Record MX'
+        verbose_name_plural = 'Record MX'
+
+class RecordCNAME(RecordCustom):
+    record_type = 'CNAME'
+
+    class Meta:
+        verbose_name = 'Record CNAME'
+        verbose_name_plural = 'Record CNAME'
+#+END_SRC
+
+* 其他
+
+** 管理界面中 APP 名称的修改
+
+请参考：
+http://ionelmc.wordpress.com/2011/06/24/custom-app-names-in-the-django-admin/
+
+这里摘录一小段代码
+#+BEGIN_SRC python
+class string_with_title(str):
+    def __new__(cls, value, title):
+        instance = str.__new__(cls, value)
+        instance._title = title
+        return instance
+
+    def title(self):
+        return self._title
+
+    __copy__ = lambda self: self
+    __deepcopy__ = lambda self, memodict: self
+
+class Stuff(models.Model):
+    class Meta:
+        app_label = string_with_title("stuffapp", "The stuff box")
+        # 'stuffapp' is the name of the django app
+        verbose_name = 'The stuff'
+        verbose_name_plural = 'The bunch of stuff'
+
+
+#+END_SRC

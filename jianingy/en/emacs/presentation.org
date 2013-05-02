@@ -1,0 +1,69 @@
+#+TITLE: Writing Presentation with Emacs
+#+AUTHOR: Jianing YANG
+#+EMAIL: jianingy.yang@gmail.com
+#+OPTIONS: H:3 num:nil toc:t \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+
+* Tips on Editing Beamer based Presentation
+  :PROPERTIES:
+  :CATEGORY: orgmode,beamer
+  :POST_DATE: [2011-07-05 Tue 11:50]
+  :ID:       o2b:6707f8e3-da8a-4736-9d4b-042bd1adeda4
+  :POSTID:   860
+  :END:
+
+** Group Slides by Section
+
+Set the =BEAMER\_FRAME\_LEVEL= to =2=, so that all first level
+paragraphs would become sections and each second level paragraph would
+be exported as a single slide.
+
+#+begin_src org-mode
+ #+BEAMER_FRAME_LEVEL: 2
+#+end_src
+
+** Insert a Topic Page Before Each Slide
+
+I archieve this goal by inserting raw latex code,
+#+begin_src org-mode
+ #+latex_header: \AtBeginSection[]{\begin{frame}<beamer>\frametitle{目录}\tableofcontents[currentsection]\end{frame}}
+#+end_src
+
+** Two Columns
+
+Use =BEAMER\_col= to set the proportion of each column. To omit the
+heading of a column, set the =ignoreheading= to =BEAMER\_env=. For
+example,
+
+#+begin_src org-mode
+ *** Problems                                               :B_ignoreheading:
+    :PROPERTIES:
+    :BEAMER_col: 0.5
+    :BEAMER_env: ignoreheading
+    :END:
+
+ *** Solutions                                              :B_ignoreheading:
+    :PROPERTIES:
+    :BEAMER_col: 0.5
+    :BEAMER_env: ignoreheading
+    :END:
+#+end_src
+
+** Image Size Adjusting
+
+Insert the following LaTex attribute right before a graph to adjust
+its height. Also, =width= is avaiable for adjusting image by width.
+
+#+begin_src org-mode
+ #+ATTR_LaTex: height=12em
+#+end_src
+
+** Table Alignment
+
+Insert the following code right before a table to set its alignment.
+The argument can be one of =l=, =c=, =r= indicating left, center or
+right respectively. Use '|' to separate columns.
+
+
+#+begin_src org-mode
+#+ATTR_LaTex: align=|r|r|r|r|
+#+end_src

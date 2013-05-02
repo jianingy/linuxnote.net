@@ -1,0 +1,308 @@
+#+TITLE: LINUX 内存管理基础知识
+#+AUTHOR: Jianing YANG
+#+EMAIL: jianingy.yang AT gmail DOT com
+#+DATE: 2012-10-27 11:02:33
+#+OPTIONS:   H:3 num:t toc:t \n:nil @:t ::t |:t ^:nil -:t f:t *:t <:t
+
+* 内核对内存的基本划分
+
+注：
+
+- 本节内容大部分来源于：http://duartes.org/ 以及 http://xanpeng.github.com/ 做为阅读笔记记录在此。
+- 图片来源自 duartes.org 以及 wikimedia.org
+
+** 基础划分
+
+首先，Linux 下的程序不能直接访问物理内存 (Physical Memory) 。程序都生活
+在自己 *独立的* 虚拟地址空间 (Virtual Memroy Space) 里。32-bits 系统上
+这个虚拟地址空间的大小是 4 GiB 而 64-bits 系统上大小是 128 TiB。虚拟地
+址空间被划分为两大部分：内核空间 (Kernel Space) 和用户空间 (User
+Space)。在 x86 32-bits 系统中，内核将占据 1 GiB 的地址空间，详见下图，
+
+#+ATTR_HTML: align="center"
+#+LABEL: fig:32bit-layout
+[[http://static.duartes.org/img/blogPosts/kernelUserMemorySplit.png]]
+
+*注意* 所谓虚拟地址空间大小是指程序所能寻址的大小并不代表程序一定会用到
+那么大的空间。例如：1 GiB 的内核空间并不代表内核占用了 1 GiB 物理内存。
+
+而在 x86 64-bits 系统上，内核会占据 128 TiB 的空间，详见下图，
+
+#+ATTR_HTML: align="center"
+#+LABEL: fig:64bit-layout
+[[http://upload.wikimedia.org/wikipedia/commons/2/29/Linux_Virtual_Memory_Layout_64bit.svg]]
+
+** 用户空间划分
+
+#+ATTR_HTML: align="left"
+#+LABEL: fig:userspace-layout
+[[http://static.duartes.org/img/blogPosts/linuxFlexibleAddressSpaceLayout.png]]
+
+一个进程用户空间大致可以分成几个部分：
+
+- 栈(Stack) :: 用来在函数调用时存储参数和返回地址以及局部变量。
+- 内存映射区(Memory Mapping Segment) :: 用来做文件到内存的映射以及存储
+     程序运行时申请的较大数据（通常大于128K)
+- 堆(Heap) :: 用来存储程序运行时申请的较小数据
+- BSS :: 用来存储未被初始化的静态变量，例如 =static char *s=
+- 数据段(Data Segment) :: 用来存储被初始化的静态变量，例如： =static char *s = "hello, world"=
+- 代码段(Text Segment) :: 用来存储程序的二进制代码
+
+/注:/ 段之间的随机偏移(Random Offset)是防止堆栈溢出的一种安全策略。堆栈溢
+出的相关知识请移步:
+http://www.phrack.org/issues.html?issue=49&id=14#article 。
+
+*注意* 段(Segement)仅仅表示一段内存和 Intel 内存架构里的 Segment 没有直
+接联系。
+
+*** 栈的相关细节
+
+x86 系统上栈向低地址空间扩展(downward)。每次当栈空间耗尽时就会处罚一个
+page fault。内核处理这个 page fault 的办法就是调用 =expand_stack=来扩展
+栈。在对栈进行扩展的之前， 内核调用 =acct_stack_growth= 来检查堆栈大小
+是否超限，即是否超过 R_LIMIT_STACK 的限制(可以通过 =ulimit -s= 修改)。
+如果确实超过了限制，程序就会收到一个 SIGFAULT 信号。
+
+*** 堆的相关细节
+
+当堆内存不足时，运行库通过 =brk(3)= 系统调用来扩展堆内存。堆的管理需要
+复杂的[[http://g.oswego.edu/dl/html/malloc.html][ 算法 ]]，否则很容易出现内存碎片。
+
+*** 数据段的相关细节
+
+- 数据段中的页 *不是匿名页* ，而是打了 *PRIVATE* 标记的内存映射。
+  这些页映射了程序二进制文件中包含静态变量初始化的部分。并n且在被改变时
+  不会写回程序二进制文件。
+
+- 当数据段中的页被写脏后(Dirty)，这些页就有可能被 SWAP 。
+- 指针的数值存储在数据段中，其指向的对象并不一定在数据段中。详见
+  下图
+
+[[http://static.duartes.org/img/blogPosts/mappingBinaryImage.png]]
+
+* 内核对内存的管理
+
+内核通过 =mm_struct= 这个结构对进程的内存进行管理。每个进程的进程描述
+符 =task_struct= 结构中会有一个指向 =mm_struct= 的指针。
+
+在 =mm_struct= 中，内存通过一种被称为 VMA (Virtual Memory Area) 的单元
+进行管理。每个 VMA 通过结构体 =vm_area_struct= 予以描述，其中包含了一段
+内存的起始和终止地址、这段内存相关的一些属性（读、写、执行和扩展方向等）
+以及被映射到这块内存的文件。事实上，有些 VMA 是没有磁盘文件映射的，这种
+VMA 通常被称作匿名的(Anonymous)。
+
+#+ATTR_HTML: align="center"
+[[http://static.duartes.org/img/blogPosts/mm_struct.png]]
+
+为了方便使用 VMA 被以两种方式索引起来。其中 =mmap= 字段以链表方式索引
+VMA，而 =mm_rb= 则以红黑树方式索引 VMA。
+
+#+ATTR_HTML: align="center"
+[[http://static.duartes.org/img/blogPosts/memoryDescriptorAndMemoryAreas.png]]
+
+上一节所说的内存段（堆、栈、BSS等）都有唯一的 VMA 与之对应。唯独Memory
+Mapping Segment 是个例外。Memory Mapping 这个部分会包含多个 VMA。
+
+每个 VMA 又由多个内存页(Page)组成。然而这些页并不一定总是在物理内存中
+存在。一旦被访问的页不在物理内存中(页表 P 位为空)，会产生一个页异常
+(page fault)。此后内核会启动一个处理程序来处理这个异常。如果是因为缺页
+引起的异常，那么内核会将该页相关的内容换入内存然后恢复之前被异常中断的
+程序。这个过程在程序本身看来就像什么也没发生过一样。
+
+
+更多 VMA 以及 PAGE TABLe 相关细节请移步：
+http://duartes.org/gustavo/blog/post/how-the-kernel-manages-your-memory
+
+* 内存统计数据解读 [0/2]
+
+任何察看系统内存的工具都会输出很多内存相关的数值。常见的包括：Free、
+Buffer、Cache、RSS 以及 VIRT 等等。下面通过分析内核统计部分的相关代码
+来解释下这些统计数值的具体含义。
+
+进程相关的内存统计请参考代码：http://lxr.linux.no/linux+v3.6.6/fs/proc/task_mmu.c
+
+** SIZE
+
+/proc/ 文件系统下 /smaps/ 中 SIZE 计算方法是
+
+#+BEGIN_SRC c
+(vma->vm_end - vma->vm_start) >> 10
+#+END_SRC
+
+通过前面对 VMA 的描述我们知道，VMA 中的页并不一定都在物理内存中。因此这
+个数值是对 VMA 所需内存总量的一个评估。而该VMA在程序实际运行时可能不会
+占据这么大的物理内存。同时因为 LINUX 的物理内存存在延时（在 pagefault
+时才会真正分配），因此程序如果申请了很多内存但并未使用 SIZE 的大小会大
+大超过实际物理内存的用量。
+
+例如，一个程序可能申请了 4M 的内存，但是只使用了其中 2M。这时，SIZE 显
+示的是整个虚拟地址空间的大小，即 4M。
+
+下面这个程序用来展示这个现象，
+
+#+BEGIN_SRC c
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define METABYTES (1024 * 1024)
+#define SIZE 4 * METABYTES
+
+int main()
+{
+	char *mm = malloc(SIZE);
+	memset(mm, 0, SIZE / 2);
+
+	FILE *fh = fopen("/proc/self/smaps", "r");
+	char block[512];
+	size_t bytes;
+	do {
+		bytes = fread(block, sizeof(char), sizeof(block) / sizeof(char) - 1, fh);
+		block[bytes] = '\0';
+		printf("%s", block);
+	} while (bytes > 0);
+	return 0;
+}
+#+END_SRC
+
+运行后会看到其中一个 VMA 有 4 MiB 的大小，但实际物理内存 (RSS) 只
+有 2 MiB 。
+
+** VIRT
+
+VIRT 是 =top(1)= 中对每个进程的虚拟内存统计。这个数值是对每一个 VMA的
+SIZE 做的求和。既然是对 SIZE 的求和就是反映虚拟内存占用而非物理内存的一
+个指标。
+
+** RSS
+
+RSS (Resident Set Size) 在很多统计中都能看到，常见的有 =top(1)= 以
+及 proc 文件系统的/smaps/ 。
+
+RSS 的统计是通过 =walk_page_range= 这个函数实现的。它遍历所有的页并回
+调 =smaps_pte_range= 函数及其子函数 =smaps_pte_entry= 进行相关统计。
+
+需要特别注意的是 RSS 并非精确表示了进程独自占用物理内存的数量。因为，
+VMA 中还包含共享内存（例如：动态库或者 mmap 文件）。这些 VMA 在物理内存中只
+有一份数据，但是会被引用他们的各个进程计算进自己的 RSS 中。
+
+** SWAP
+
+SWAP 也是很多统计工具涉及的指标之一。在 =top(1)= 中顶部的 SWAP 展示了
+系统目前使用 SWAP 的大小。而在 /proc/ 文件系统的 /smaps/ 中，可以看到
+单个 VMA 使用的 SWAP 大小。为了方便统计，Robert Love 制作了一个统计单
+个进程占用 SWAP 的脚本。
+
+以下脚本来源：
+http://www.quora.com/How-can-you-determine-what-processes-are-using-swap-space
+#+BEGIN_SRC sh
+#! /bin/bash
+#
+# swap.sh: Shows the swap usage of each process
+# Author: Robert Love
+
+swap_total=0
+for i in /proc/[0-9]*; do
+  pid=$(echo $i | sed -e 's/\/proc\///g')
+  swap_pid=$(cat /proc/$pid/smaps |
+    awk 'BEGIN{total=0}/^Swap:/{total+=$2}END{print total}')
+  if [ "$swap_pid" -gt 0 ]; then
+    name=$(cat /proc/$pid/status | grep ^Name: |
+      awk '{print $2}')
+    echo "${name} (${pid}) ${swap_pid} kB"
+    let swap_total+=$swap_pid
+  fi
+done
+echo
+echo "Total: ${swap_total} kB"
+#+END_SRC
+
+同 RSS 一样 SWAP 也是通过遍历页表计算出来的。从 SWAP 的统计代码侧面反
+映出，在进行内存交换时 file-backed 的 mmap 是不会进入 SWAP 的。SWAP 是
+用于交换出那些没有实际映射文件的匿名页而存在的。
+
+** PSS
+
+PSS 目前见于 /proc/ 文件系统的 /smaps/ 文件。
+
+PSS 可以解决 RSS 存在共享内存的问题。PSS 把共享内存按照共享它的进程数
+量平均分到每个进程中计算。例如：一个进程有 2MB 的 RSS，其中 1M 是和另
+外一个进程共享的。那么这个进程的 PSS 就是 =1MB + 1MB / 2 = 1.5 MB=。
+
+** TODO PAGECACHE
+** TODO BUFFER
+** 页相关统计的代码 (3.6.6)
+
+#+BEGIN_SRC c
+static void smaps_pte_entry(pte_t ptent, unsigned long addr,
+                unsigned long ptent_size, struct mm_walk *walk)
+{
+        struct mem_size_stats *mss = walk->private;
+        struct vm_area_struct *vma = mss->vma;
+        pgoff_t pgoff = linear_page_index(vma, addr);
+        struct page *page = NULL;
+        int mapcount;
+        if (pte_present(ptent)) {
+                page = vm_normal_page(vma, addr, ptent);
+        } else if (is_swap_pte(ptent)) {
+                swp_entry_t swpent = pte_to_swp_entry(ptent);
+
+                if (!non_swap_entry(swpent))
+                        mss->swap += ptent_size; /* swap 的大小 */
+                else if (is_migration_entry(swpent))
+                        page = migration_entry_to_page(swpent);
+        } else if (pte_file(ptent)) {
+                if (pte_to_pgoff(ptent) != pgoff)
+                        mss->nonlinear += ptent_size;
+        }
+
+        if (!page)
+                return; /* 如果是 swap pte 或者 file pte 这里就返回了 */
+
+        if (PageAnon(page))
+                mss->anonymous += ptent_size;
+
+        if (page->index != pgoff)
+                mss->nonlinear += ptent_size;
+
+        mss->resident += ptent_size; /* 统计 RSS */
+
+        /* Accumulate the size in pages that have been accessed. */
+        if (pte_young(ptent) || PageReferenced(page))
+                mss->referenced += ptent_size;
+        mapcount = page_mapcount(page);
+        if (mapcount >= 2) {
+                if (pte_dirty(ptent) || PageDirty(page))
+                        mss->shared_dirty += ptent_size;
+                else
+                        mss->shared_clean += ptent_size;
+                /* 均分共享内存的 PSS 统计 */
+                mss->pss += (ptent_size << PSS_SHIFT) / mapcount;
+        } else {
+                if (pte_dirty(ptent) || PageDirty(page))
+                        mss->private_dirty += ptent_size;
+                else
+                        mss->private_clean += ptent_size;
+                mss->pss += (ptent_size << PSS_SHIFT);
+        }
+}
+#+END_SRC
+
+
+* TODO 了解内存使用状况
+
+查看系统整体内存使用状况可以通过系统命令： =top(1)= ， =free(1)= 。除此
+之外还可以通过 proc 下的文件 =/proc/meminfo= 。
+
+查看单个进程的内存使用状况可以通过 proc 下的文件 =/proc/PID/smap= 。
+
+* TODO 内存相关运维策略
+* 参考文献
+
+- http://www.kerneltravel.net/kernel-book/%E7%AC%AC%E5%85%AD%E7%AB%A0%20Linux%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/6.4.1.htm
+- https://mail.gnome.org/archives/gnome-list/1999-September/msg00036.html
+- http://bmaurer.blogspot.jp/2006/03/memory-usage-with-smaps.html
+- http://duartes.org/gustavo/blog/post/how-the-kernel-manages-your-memory
+- http://duartes.org/gustavo/blog/post/page-cache-the-affair-between-memory-and-files
+- http://xanpeng.github.com/linux/2012/03/01/buffer-cache.html
+- http://www.quora.com/How-can-you-determine-what-processes-are-using-swap-space

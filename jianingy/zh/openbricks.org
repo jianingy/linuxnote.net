@@ -1,0 +1,6 @@
+#+TITLE: OpenBricks 笔记
+
+单独 Build 一个包
+#+BEGIN_SRC sh
+./scripts/unpack automake
+#+END_SRC

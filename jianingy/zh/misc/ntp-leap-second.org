@@ -1,0 +1,326 @@
+#+TITLE: 内核润秒 BUG 分析
+#+DATE: Sun 24 Jun 2012 11:08:18 PM CST
+#+AUTHOR: Jianing Yang <jianingy.yang AT gmail DOT com>
+#+OPTIONS: ^:nil toc:t \n:nil
+
+* 何为润秒
+
+#+BEGIN_EXAMPLE
+润秒是在协调世界时 (UTC) 中增加或减少一秒，使它与平太阳时贴近所做调整
+
+-- from wikipedia http://zh.wikipedia.org/zh-cn/%E9%97%B0%E7%A7%92
+#+END_EXAMPLE
+
+* 规避内核 BUG 的测录俄
+
+会出现润秒问题的系统具备以下条件：
+
+#+BEGIN_EXAMPLE
+内核版本为：2.6.21 2.6.25 2.6.26 2.6.27
+#+END_EXAMPLE
+
+由于润秒标志位的作用时间为一天，因此需要在润秒前一天停止 NTP 服务。防止
+服务器将润秒标志位同步过来。
+
+注意：如果是国内的服务器，“前一天”必须由 UTC 时间对应到 北京时间（CST）。
+例如：2012.06.30 23:59:60 这个润秒，对应北京时间是 2012.07.01 07:59:60。
+因此，需要在2012.06.30 08:00:00 这个时间之前停止 NTP 同步。
+
+* 内核中的润秒处理
+
+润秒对内核中计时相关的很多操作都至关重要，例如：jiffies 的计算，在润秒
+时就要做出相应处理。NTP系统通过内核 API ntp_adjtime() 设置一个标志位，
+来通知内核今天午夜会出现润秒。当午夜降临，内核会根据标志位做出相应处理。
+
+下面是 2.6.18 内核对润秒的处理，
+
+#+BEGIN_SRC c
+// http://lxr.linux.no/linux+v2.6.18/kernel/timer.c#L642
+        case TIME_INS:
+                if (xtime.tv_sec % 86400 == 0) {
+                        xtime.tv_sec--;
+                        wall_to_monotonic.tv_sec++;
+                        /*
+                         * The timer interpolator will make time change
+                         * gradually instead of an immediate jump by one second
+                         */
+                        time_interpolator_update(-NSEC_PER_SEC);
+                        time_state = TIME_OOP;
+                        clock_was_set();
+                        printk(KERN_NOTICE "Clock: inserting leap second "
+                                        "23:59:60 UTC\n");
+                }
+                break;
+        case TIME_DEL:
+                if ((xtime.tv_sec + 1) % 86400 == 0) {
+                        xtime.tv_sec++;
+                        wall_to_monotonic.tv_sec--;
+                        /*
+                         * Use of time interpolator for a gradual change of
+                         * time
+                         */
+                        time_interpolator_update(NSEC_PER_SEC);
+                        time_state = TIME_WAIT;
+                        clock_was_set();
+                        printk(KERN_NOTICE "Clock: deleting leap second "
+                                        "23:59:59 UTC\n");
+                }
+                break;
+#+END_SRC
+
+当润秒发生时内核会打印出插入或者删除润秒的讯息，例如：
+
+#+BEGIN_EXAMPLE
+Clock: inserting leap second 23:59:60 UTC
+#+END_EXAMPLE
+
+/ntptime/ 这个命令可以用来检查是否存在润秒标志位
+
+#+BEGIN_EXAMPLE
+$ ntptime -r
+ntp_gettime() returns code 1 (INS)
+  time d39a117d.ccb39000  Sat, Jun 30 2012 23:59:57.799, (.799615),
+  maximum error 1040 us, estimated error 16 us  ntptime=d39a117d.ccb39000 unixtime=4fef92fd.799615 Sat Jun 30 23:59:57 2012
+
+ntp_adjtime() returns code 1 (INS)
+  modes 0x0 (),
+  offset 0.000 us, frequency 0.000 ppm, interval 4 s,
+  maximum error 1040 us, estimated error 16 us,
+  status 0x10 (INS),
+  time constant 2, precision 1.000 us, tolerance 512 ppm,
+  pps frequency 0.000 ppm, stability 512.000 ppm, jitter 200.000 us,
+  intervals 0, jitter exceeded 0, stability exceeded 0, errors 0.
+#+END_EXAMPLE
+
+这里出现 /returns code 1 (INS)/ 或者 /DEL/ 表示润秒位已经设置。
+
+* 内核的润秒 BUG
+
+** 润秒BUG的测试方法方法
+
+反复产生润秒的脚本，leap-second.sh
+#+BEGIN_SRC sh
+
+#!/bin/bash
+# author: jianingy.yang at gmail dot com
+
+function leap_second()
+{
+  export TZ=UTC
+
+  # set current time to 4 seconds before mid night
+  date 063023592012.56
+
+  # make clock unsync
+  ntptime -e 16 -m 16 -s 64
+  sleep 1
+
+  # set leap second bit manually
+  ntptime -s 16
+
+  # start tracking
+  echo "---" > /dev/kmsg
+
+  i=5
+
+  while [ $i -gt 0 ]; do
+	echo "$i| $(date) | $(dmesg | tail -1)"
+	((i - 1))
+    sleep 1
+  done
+}
+
+while true; do
+  leap_second
+done
+#+END_SRC
+
+当时间显示为 /Sat Jun 30 23:59:59 UTC 2012/ 时，会出现内核死锁同时打
+印出调用栈。
+
+
+** 2.6.21 上的润秒死锁
+
+*** 死锁时的调用栈
+
+#+BEGIN_EXAMPLE
+BUG: warning at arch/i386/kernel/smp.c:549/smp_call_function() (Not tainted)
+ [<c0439412>] retrigger_next_event+0x0/0x9c
+ [<c0417b02>] smp_call_function+0x65/0xcf
+ [<c043ad9a>] clocksource_get_next+0x39/0x3f
+ [<c0439412>] retrigger_next_event+0x0/0x9c
+ [<c042ac02>] on_each_cpu+0x18/0x27
+ [<c0439b4c>] clock_was_set+0x18/0x1a
+ [<c043ab56>] second_overflow+0xad/0x227
+ [<c042df72>] do_timer+0xd9/0x6f3
+ [<c043997f>] hrtimer_start+0xf7/0x101
+ [<c043d230>] tick_do_update_jiffies64+0x93/0xa8
+ [<c043d42b>] tick_nohz_update_jiffies+0x2f/0x33
+ [<c0419bf8>] smp_apic_timer_interrupt+0x27/0x80
+ [<c043997f>] hrtimer_start+0xf7/0x101
+ [<c04059bc>] apic_timer_interrupt+0x28/0x30
+ [<c0403d60>] default_idle+0x0/0x3e
+ [<c0403d8c>] default_idle+0x2c/0x3e
+ [<c04033d6>] cpu_idle+0xa3/0xc4
+ =======================
+#+END_EXAMPLE
+
+*** 代码分析
+
+每次时钟中断触发时会调用 =tick_do_update_jiffies64= 更新 /jiffies/ 的
+值。因此在更新前对 =xtime_lock= 加了写锁。
+
+润秒产生时，需要修正一下 /jiffies/  的值，所以在
+=tick_do_update_jiffies64= 里面最终会调用到 =second_overflow= 这个函数
+处理润秒。
+
+在函数 =second_overflow= 里面，处理润秒的增加和减少前都调用了一个
+=clock_was_set= 函数。该函数内部，请求了 =xtime_lock= 的读锁。此时，与
+先前的写锁发生死锁。
+
+#+BEGIN_SRC c
+
+// kernel/time/tick-sched.c#L46
+static void tick_do_update_jiffies64(ktime_t now)
+{
+        unsigned long ticks = 0;
+        ktime_t delta;
+
+        /* Reevalute with xtime_lock held */
+        write_seqlock(&xtime_lock);  // <--------- 写锁 -----------
+
+        delta = ktime_sub(now, last_jiffies_update);
+        if (delta.tv64 >= tick_period.tv64) {
+
+                delta = ktime_sub(delta, tick_period);
+                last_jiffies_update = ktime_add(last_jiffies_update,
+                                                tick_period);
+
+                /* Slow path for long timeouts */
+                if (unlikely(delta.tv64 >= tick_period.tv64)) {
+                        s64 incr = ktime_to_ns(tick_period);
+
+                        ticks = ktime_divns(delta, incr);
+
+                        last_jiffies_update = ktime_add_ns(last_jiffies_update,
+                                                           incr * ticks);
+                }
+                do_timer(++ticks);
+        }
+        write_sequnlock(&xtime_lock);
+}
+#+END_SRC
+
+#+BEGIN_SRC c
+
+// kernel/hrtimer.c#L455
+void clock_was_set(void)
+{
+        /* Retrigger the CPU local events everywhere */
+        on_each_cpu(retrigger_next_event, NULL, 0, 1);
+}
+
+// kernel/hrtimer.c#L417
+static void retrigger_next_event(void *arg)
+{
+        struct hrtimer_cpu_base *base;
+        struct timespec realtime_offset;
+        unsigned long seq;
+
+        if (!hrtimer_hres_active())
+                return;
+
+        do {
+                seq = read_seqbegin(&xtime_lock);  // <------- 读锁 -------
+                set_normalized_timespec(&realtime_offset,
+                                        -wall_to_monotonic.tv_sec,
+                                        -wall_to_monotonic.tv_nsec);
+        } while (read_seqretry(&xtime_lock, seq));
+
+        base = &__get_cpu_var(hrtimer_bases);
+
+        /* Adjust CLOCK_REALTIME offset */
+        spin_lock(&base->lock);
+        base->clock_base[CLOCK_REALTIME].offset =
+                timespec_to_ktime(realtime_offset);
+
+        hrtimer_force_reprogram(base);
+        spin_unlock(&base->lock);
+}
+#+END_SRC
+
+** 2.6.25-27 上的润秒死锁
+
+这个死锁最早被一个叫 =Chris Adam= 的兄弟重现：
+https://lkml.org/lkml/2009/1/2/373
+
+从他给出的调用栈上来看，应该是润秒产生后的 =printk= 调用，有一定机率触
+发一次针对 =log_wait= 这个等待队列的进程调度。由于fair scheduler在调度
+的时候需要使用 =ktime_get_ts= 取一下时间，这个函数内部又需要请求
+=xtime_lock= 的读锁，然而这个锁的写锁之前已经被处理时钟中断的程序拿到了，
+因此会导致死锁。
+
+#+BEGIN_SRC c
+// http://lxr.linux.no/linux+v2.6.18/kernel/hrtimer.c#L107
+void ktime_get_ts(struct timespec *ts)
+{
+        struct timespec tomono;
+        unsigned long seq;
+
+        do {
+                seq = read_seqbegin(&xtime_lock);
+                getnstimeofday(ts);
+                tomono = wall_to_monotonic;
+
+        } while (read_seqretry(&xtime_lock, seq));
+
+        set_normalized_timespec(ts, ts->tv_sec + tomono.tv_sec,
+                                ts->tv_nsec + tomono.tv_nsec);
+}
+#+END_SRC
+
+不过这个 BUG 我一直没能复现，即使是用 =Chris Adam= 提出的方法模拟一个非
+常忙的系统也没法复现。
+
+以后的系统没有这个问题，可能是因为 =klogd= 的调度被安排在和其他时钟中断
+处理程序平行的位置上了。 =wake_up_klogd= 仅仅设置了一个标志位，等待下一
+次 =update_process_times= 的时候，klogd才有可能被调度。再加之，
+=xtime_lock= 这个锁的粒度细化，klogd的调度便不会导致死锁了。
+
+#+BEGIN_SRC c
+// http://lxr.linux.no/linux+v2.6.32/kernel/printk.c#L1020
+void printk_tick(void)
+{
+        if (__get_cpu_var(printk_pending)) {
+                __get_cpu_var(printk_pending) = 0;
+                wake_up_interruptible(&log_wait);
+        }
+}
+
+// ...
+
+void wake_up_klogd(void)
+{
+        if (waitqueue_active(&log_wait))
+                __raw_get_cpu_var(printk_pending) = 1;
+}
+#+END_SRC
+
+#+BEGIN_SRC c
+// http://lxr.linux.no/linux+v2.6.32/kernel/timer.c#L1202
+void update_process_times(int user_tick)
+{
+        struct task_struct *p = current;
+        int cpu = smp_processor_id();
+
+        /* Note: this timer irq context must be accounted for as well. */
+        account_process_tick(p, user_tick);
+        run_local_timers();
+        rcu_check_callbacks(cpu, user_tick);
+        printk_tick();  // <------- HERE ---------
+        scheduler_tick();
+        run_posix_cpu_timers(p);
+}
+#+END_SRC
+
+虽然没法复现，但是为了保险还是及时停止 NTPD 吧。

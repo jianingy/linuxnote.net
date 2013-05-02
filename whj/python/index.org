@@ -1,0 +1,6 @@
+#+TITLE: Whj's python page 
+#+AUTHOR: Whj
+#+EMAIL: wfast888@hotmail.com
+#+OPTIONS: H:2 num:nil toc:t \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+- [[file:../index.org][GO BACK]]
+- [[file:python_basic.org][Python Basic]]

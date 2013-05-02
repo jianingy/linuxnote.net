@@ -1,0 +1,27 @@
+#+TITLE:     软件设计思路
+#+AUTHOR:    Jianing Yang
+#+EMAIL:     jianingy.yang AT gmail DOT com
+#+DATE:      2012-09-04 Tue
+#+DESCRIPTION:
+#+KEYWORDS:
+#+LANGUAGE:  en
+#+OPTIONS:   H:3 num:t toc:t \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+#+OPTIONS:   TeX:t LaTeX:t skip:nil d:nil todo:t pri:nil tags:not-in-toc
+#+INFOJS_OPT: view:nil toc:nil ltoc:t mouse:underline buttons:0 path:http://orgmode.org/org-info.js
+#+EXPORT_SELECT_TAGS: export
+#+EXPORT_EXCLUDE_TAGS: noexport
+#+LINK_UP:
+#+LINK_HOME:
+#+XSLT:
+
+
+* Loose coupling v.s. Tight Coupling
+
+| Issue               | Loose coupling                   | Tight coupling                  |
+|---------------------+----------------------------------+---------------------------------|
+| Size of interface   | narrow interface: few operations | wide interface: many operations |
+| Complexity          | Simple specifications            | Complex specifications          |
+| Invariants          | Local                            | Global                          |
+| Pre/post-conditions | Weak, nondeterministic           | Strong, deterministic           |
+| Correctness         | Easier to get right              | Harder to get right             |
+| Performance         | May sacrifice performance        | May expose optimizations        |

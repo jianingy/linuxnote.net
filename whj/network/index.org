@@ -1,0 +1,9 @@
+#+TITLE: Whj's network page 
+#+AUTHOR: Whj
+#+EMAIL: wfast888@hotmail.com
+
+
+* BGP 
+** [[file:bgp.org][BGP]]
+互联网基础
+

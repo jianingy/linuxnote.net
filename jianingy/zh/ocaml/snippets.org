@@ -1,0 +1,28 @@
+#+TITLE:     代码碎片
+#+AUTHOR:    Jianing Yang
+#+EMAIL:     jianingy.yang AT gmail DOT com
+#+DATE:      2012-10-24 Wed
+#+DESCRIPTION:
+#+KEYWORDS:
+#+LANGUAGE:  en
+#+OPTIONS:   H:3 num:t toc:t \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+#+OPTIONS:   TeX:t LaTeX:t skip:nil d:nil todo:t pri:nil tags:not-in-toc
+#+INFOJS_OPT: view:nil toc:nil ltoc:t mouse:underline buttons:0 path:http://orgmode.org/org-info.js
+#+EXPORT_SELECT_TAGS: export
+#+EXPORT_EXCLUDE_TAGS: noexport
+#+LINK_UP:
+#+LINK_HOME:
+#+XSLT:
+
+
+* 文件操作
+
+** 读取文件内容到 LIST 结构
+#+BEGIN_SRC ocaml
+#use "topfind" ;;
+#require "extlib" ;;
+
+let read_file fn = Std.input_list (open_in fn) ;;
+
+read_file "/tmp/EURUSD60.csv" ;;
+#+END_SRC

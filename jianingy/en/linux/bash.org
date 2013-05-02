@@ -1,0 +1,235 @@
+#+TITLE: Bourne-Again SHell
+#+AUTHOR: Jianing YANG
+#+EMAIL: jianingy.yang@gmail.com
+#+OPTIONS: H:3 num:nil toc:t \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+
+* Command Line Tricks
+** Readline Shortcuts
+
+The famous library libreadline provides a great number of features that help
+to input command efficiently. Bash, as based on libreadline, also brings all
+its benefits to our daily CLI operations.
+
+There are two sets of CLI shortcuts. One is based on VIM and the other is
+based on Emacs. Most of the following operations are of Emacs type as it is
+my favorite editor.
+
+Notations: C: Control, A: Alt, S: Shift
+
+- C-a / C-e :: Move to the beginning / end of current line.
+- A-f / A-b :: Move to next / previous word.
+- A-. :: Yank(Paste) the last arugment of last command in current position.
+- C-r :: Search in previous command.
+- C-k :: Kill(Copy) current line.
+- C-y :: Yank last killed line in current position.
+- A-y :: Yank previous killed lines in current position. (Only available after C-y)
+
+** Special Characters
+
+Bash has many special characters that can help increase our working
+efficiency. The followings are my favorites.
+
+*** '!!' - Double Bangs
+
+It is used to replace with the previous command in place of where '!!'
+occurred. My favorite is to use it with =sudo= as it is full of emotion. For
+example,
+
+#+begin_src sh
+$ tail -f /var/log/messages
+tail: cannot open `/var/log/messages' for reading: Permission denied
+tail: no files remaining
+$ sudo !!
+sudo tail -f /var/log/messages
+#+end_src
+
+
+*** '{}' - Nut
+
+It is used to do expansion and it has basically two kinds of usage,
+enumeration and range.
+
+First, we could use it to rename files, like,
+
+#+begin_src sh
+mv -v /tools/bin/ld.{new,old}
+#+end_src
+
+It is identical to =mv -v /tools/bin/ld.new /tools/bin/ld.old=, but is much
+shorter.
+
+Second, we could use it to expand a range, like,
+
+#+begin_src sh
+for h in f7-i{10..20}.jianingy.com; do
+  ssh $h uptime
+done
+#+end_src
+
+** Stop Massive Output Immediately
+
+When /cat/ a large file carelessly, instead of hitting Ctrl-C crazily, press
+Ctrl-S to turn off data transfer at first time. Then, after data transfer
+stopped, just a one time Ctrl-C would stop the command.
+
+If Ctrl-S doesn't work for you, it may because that the /stop/ function is
+bound to another key. Try type =stty -a= to figure out which shortcut is bound
+to it. For example, the following output shows that /stop/ is bound to \^S aka
+Ctrl-S.
+
+
+#+begin_example
+cchars: discard = <undef>; dsusp = ^Y; eof = ^D; eol = <undef>;
+	eol2 = <undef>; erase = ^?; intr = ^C; kill = ^U;
+	lnext = <undef>; min = 1; quit = ^\; reprint = ^R; start = ^Q;
+	status = <undef>; stop = ^S; susp = ^Z; time = 0; werase = ^W;
+#+end_example
+
+* String Operations
+** Trimming
+
+String operations that are available in many programming languages also have
+their counterparts in Bash. The following snippet illustrates some of them,
+
+#+begin_src sh
+MYVAR="foodforthought"
+
+# Remove all the characters before the last occurance 'fo' and the 'fo' itself
+echo ${MYVAR##*fo}
+# Remove all the characters before the first occurance 'fo' and the 'fo' itself
+echo ${MYVAR#*fo}
+# Search from right, remove all the characters after the last occurance of 'fo'
+# and the 'fo' itself.
+echo ${MYVAR%%fo*}
+# Search from right, remove all the characters after the first occurance of 'fo'
+# and the 'fo' itself.
+echo ${MYVAR%fo*}
+#+end_src
+
+It is fairly simple to remember these notations by looking at the '3', '4',
+'5' keys of a keyboard. Notice that '#' is at the left of '$$' so the '#' is
+used for 'delete before'. In a similar way, '%' is at the right of '$' so the
+'%' is used for 'delete after'. One character means deleting until the first
+occurrence, while two characters mean that deleting until the last occurrence.
+
+** Substring
+
+Additionally, 'substring' exists in Bash as well. For example,
+
+#+begin_src sh
+MYVAR="foodforthought"
+echo ${MYVAR:0:3}
+#+end_src
+
+The parameters are separated by colons. The first parameter, '0' in the
+example given above, indicates the start position for cutting. The second
+parameter, which can be omitted, indicates a length to cut. If it is omitted,
+all of the rest characters will be included.
+
+** Default Value
+
+There are several convenient ways to present a default value when a variable
+is empty. For instance,
+
+#+begin_src sh
+
+# Return 'Default' if MYVAR is empty
+echo ${MYVAR:-Default}
+
+# Set MYVAR to 'Assigned' if MYVAR is empty
+echo ${MYVAR:=Assigned} $MYVAR
+
+unset MYVAR
+
+# Raise an error with message'Can not be empty' if MYVAR is empty'
+echo ${MYVAR:?Can not be empty}
+#+end_src
+
+* Process Control
+** The return value of a subprocess
+
+Sometimes we put an '&' at the end of a command to put it into
+background. When we want to know the return value of a background
+subprocess, 'wait', a bash built-in command, comes to rescue. 'wait'
+suspends current process until the specified subprocess finish and
+returns its return value. To identify a subprocess, wait needs an
+argument, which is the PID of the subprocess. Another built-in
+command, called 'jobs', could be used for this purpose. 'jobs' prints
+all PIDs of subprocesses of the current process. The following code
+snippet demonstrates how to use 'wait' and 'jobs' together to handle
+multiprocess tasks.
+
+#+begin_src sh
+#!/bin/bash
+command1 &
+command2 &
+command3 &
+for pid in $(jobs -p); do
+  wait $pid
+  [ "x$?" == "x0" ] && ((count++))
+done
+#+end_src
+
+* Command History
+
+When we open several terminals on one computer, they won't share their command
+history by default. To solve this problem, we need to force bash to write its
+command history to .bash\_history whenever we've entered a new command. Only
+two steps are needed here,
+
+#+begin_src sh
+shopt -s histappend
+export PROMPT_COMMAND='history -a'
+#+end_src
+
+The first command switches the writing mode of bash history to 'append' mode.
+The second command let 'history -a' be invoked after every command. The
+command 'history -a' will append latest history to harddisk so that other bash
+processes could read it immediately. Also, it can be put into .bashrc in order
+to get rid of this issue transparently.
+* Traps
+** Different behavior of readlink on RHEL4 and RHEL5
+
+The following script will output nothing on RHEL4, however, it will print the
+path to not_exists on RHEL5 system.
+
+#+begin_src sh
+ln -sf not_exists symbol_link
+readlink -f symbol_link
+#+end_src
+
+The version of readlink on those two systems are
+
+- RHEL4 :: readlink (coreutils) 5.2.1
+- RHEL5 :: readlink (GNU coreutils) 5.97
+
+** Standard Input Stealing
+
+Once, I used the following script to find and delete broken symbolic links.
+
+#+begin_src sh
+while read FN; do
+test -e "$FN" || rm -iv "$FN"
+done < <(find . $level -type l)
+#+end_src
+
+However, it did not run as what I expected. The '-i' option of =rm -iv=
+command did not offer me any chance to answer its question. Instead, it just
+printed questions and continues. Of course, no files were deleted.
+
+After reviewed the whole code, I realized that I had used the STDIN for
+passing filenames so that when =rm -iv= wants to read answers from the STDIN,
+it will get a filename from the STDIN. The original standard input, that is
+the input of the keyboard, had been stolen.
+
+To solve this problem, I copied the original standard input to another file
+descriptor at the beginning so that I could use the duplicated file
+descriptor, which is the original standard input, for =rm -iv=. A modification
+looks like,
+
+#+begin_src sh
+exec 3<&0 # copies STDIN, it prevents 'read' stealing STDIN from '$command'
+while read FN; do
+  test -e "$FN" || rm -iv "$FN" <&3
+done < <(find . $level -type l)
+#+end_src

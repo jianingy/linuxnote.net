@@ -1,0 +1,61 @@
+#+TITLE: 迅雷离线自动化下载脚本指南
+#+AUTHOR: Luo Yi
+#+EMAIL: luoyi.ly@gmail.com
+
+* 迅雷离线自动化下载脚本指南
+
+** 安装使用
+
+- 新建一个目录，下载 [[file:xunlei_down.sh][xunlei\_down.sh]] 和 [[file:xunlei_parser.pl][xunlei\_parser.pl]] 到目录中
+
+- 用 Firefox 登录迅雷离线，打开页面，然后用 Firefox 的 Export Cookies ... 插件将 cookies.txt 导出到目录中
+
+
+#+begin_src sh
+
+# 得到所有文件的 URL
+./xunlei_down.sh -p 'http://dynamic.cloud.vip.xunlei.com/user_task?userid=123456' >url
+
+# 下载指定的文件
+cat url |grep 'XXX' |./xunlei_down.sh -u
+#+end_src
+
+
+** 简介
+
+迅雷的离线下载解决了 P2P 到 HTTP 转换的问题，我们需要一套系统来解决批量
+获得 HTTP 地址的问题。
+
+迅雷页面中的地址有如下两种形式：
+
+- 直接单文件形式，可以页面直接拿到 URL
+
+#+ATTR_HTML: class="frm"
+[[./xunlei_direct.png]]
+
+- 文件夹形式，需要点击  “打开”然后才能看见里面各个文件的 URL
+
+#+ATTR_HTML: class="frm"
+[[./xunlei_indirect_1.png]]
+
+打开以后，形式如下：
+
+#+ATTR_HTML: class="frm"
+[[./xunlei_indirect_2.png]]
+
+很明显，在文件数目较多的情况下，如果没有一套批量获得 HTTP URL 的方式，将无法有效地
+管理自己的离线下载资源。
+
+** 系统要求
+
+由于整个 HTML 页面和 JSON 内容的解析均由 Perl 完成，因此，请确保系统上有
+标准的 Perl 安装包，以及如下的 Perl 模块：
+
+#+begin_src perl
+
+use XML::LibXML;
+use JSON::XS;
+use Encode;
+use Data::Dumper;
+
+#+end_src

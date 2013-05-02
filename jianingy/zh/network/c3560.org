@@ -1,0 +1,146 @@
+#+TITLE: C3560 配置小记
+#+DATE: Mon 02 Jul 2012 10:21:37 PM CST
+#+AUTHOR: Jianing Yang <jianingy.yang AT gmail DOT com>
+#+OPTIONS: toc:t ^:t
+
+* DHCP 配置
+
+** 服务器配置
+
+#+BEGIN_EXAMPLE
+ip dhcp pool mypool
+   network 192.168.155.0 255.255.255.0
+
+interface GigabitEthernet0/1
+   ip address 192.168.155.1 255.255.255.0
+#+END_EXAMPLE
+
+* VLAN 配置
+
+** Trunk 接口配置
+
+#+BEGIN_EXAMPLE
+interface GigabitEthernet0/22
+ switchport trunk encapsulation dot1q
+ switchport mode trunk
+#+END_EXAMPLE
+
+** VLAN 地址配置
+
+#+BEGIN_EXAMPLE
+interface Vlan155
+ ip address 192.168.155.1 255.255.255.0
+#+END_EXAMPLE
+
+** 启动 VLAN
+
+#+BEGIN_EXAMPLE
+vlan 155
+ name vlan155
+#+END_EXAMPLE
+
+** 配置查看
+
+查看单个 vlan 的配置情况
+#+BEGIN_EXAMPLE
+show vlan id 155
+#+END_EXAMPLE
+* SSH 配置
+
+** 生成 SSH 主机密钥
+
+#+BEGIN_EXAMPLE
+crypto key generate rsa
+#+END_EXAMPLE
+
+** 登录超时和重试次数设置
+#+BEGIN_EXAMPLE
+ip ssh time-out 8
+ip ssh authentication-retires 5
+#+END_EXAMPLE
+
+** 登录设置
+#+BEGIN_EXAMPLE
+line vty 0 4
+ password 7 xxxxx
+ login
+ transport input telnet ssh
+#+END_EXAMPLE
+
+* OSPF 配置
+
+** OSPF 服务配置
+
+#+BEGIN_EXAMPLE
+router ospf 100
+ router-id 10.2.31.2
+ log-adjacency-changes
+ area 0 authentication message-digest
+ network 10.2.1.0 0.0.0.255 area 0
+ network 10.2.2.0 0.0.0.255 area 0
+ network 10.2.3.0 0.0.0.255 area 0
+ network 10.2.4.0 0.0.0.255 area 0
+ network 10.2.31.0 0.0.0.7 area 0
+#+END_EXAMPLE
+
+** 认证配置
+#+BEGIN_EXAMPLE
+interface Vlan1
+ ip address 10.2.31.2 255.255.255.248
+ ip ospf authentication message-digest
+ ip ospf message-digest-key <KEY-ID> md5 <PASSWORD>
+#+END_EXAMPLE
+
+
+* 创建 config 只读用户
+
+** 开启本地 aaa 认证
+
+#+BEGIN_EXAMPLE
+
+aaa new-model
+aaa authentication login default local
+aaa authorization exec default local
+
+#+END_EXAMPLE
+
+** 添加用户并设置权限等级
+#+BEGIN_EXAMPLE
+username backup privilege 5 password backup
+privilege exec level 3 show config
+#+END_EXAMPLE
+
+* 其他配置
+
+** 设置主机名
+#+BEGIN_EXAMPLE
+hostname sacore
+#+END_EXAMPLE
+
+** 关闭默认的自动 DNS 查询
+
+#+BEGIN_EXAMPLE
+no ip domain-lookup
+#+END_EXAMPLE
+
+** 设置 DNS 服务器配置
+#+BEGIN_EXAMPLE
+ip name-server xx.xx.xx.xx
+#+END_EXAMPLE
+
+
+** 开启 SNMP
+#+BEGIN_EXAMPLE
+snmp-server community public RO 2
+#+END_EXAMPLE
+
+
+** NTP 配置
+#+BEGIN_EXAMPLE
+ntp server 192.168.155.1 source Vlan155 prefer
+#+END_EXAMPLE
+
+** 自动加密密码
+#+BEGIN_EXAMPLE
+service password-encryption
+#+END_EXAMPLE

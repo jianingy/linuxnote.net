@@ -1,0 +1,248 @@
+#+TITLE: Arch Linux On Iomega® Home Media Network Hard Drive, Cloud Edition
+#+AUTHOR: Luo Yi <luoyi.ly AT gmail.com>
+
+* 硬件准备
+
+首先，我们当然需要一个 IomegaNAS 的设备。
+
+其次，为了方便看到系统运行的情况，
+我们还需要一个 PL2303 的 TTL 到 USB 的转换器。下图中插在 T410 笔记本
+上闪着红灯的电工板卡就能满足需要。我是从 [[http://detail.tmall.com/item.htm?id=14923844549][淘宝]]
+上买的，仅需 8 元。
+
+#+BEGIN_HTML
+<a href="http://www.flickr.com/photos/89689021@N08/8152866189/" title="IMAG0061 by luoyi_ly, on Flickr"><img src="http://farm8.staticflickr.com/7256/8152866189_85694319eb.jpg" width="500" height="299" alt="IMAG0061"></a>
+#+END_HTML
+
+这个电工板卡上有 RXD/TXD/GND/3.3 等管脚定义，RXD 接到盒子的 TX 接口，
+TXD 接到盒子的 RX 接口，GND 与盒子的 GND 相连。在盒子加电启动的时候，
+3.3V 的接口不能接上，否则系统拒绝启动。可以在连接 3 个管脚的时候把系统
+通上电，然后再把 3.3V 的管脚接上。
+
+IomegaNAS 前面板
+
+#+BEGIN_HTML
+<a href="http://www.flickr.com/photos/89689021@N08/8152894442/" title="IMAG0062 by luoyi_ly, on Flickr"><img src="http://farm9.staticflickr.com/8066/8152894442_007a0be220.jpg" width="500" height="299" alt="IMAG0062"></a>
+#+END_HTML
+
+同时，我们还需要一个外置 USB 硬盘盒，才能在笔记本上给 IomegaNAS 的硬盘做格式化和安装系统等工作
+
+#+BEGIN_HTML
+<a href="http://www.flickr.com/photos/89689021@N08/8152895052/" title="IMAG0063 by luoyi_ly, on Flickr"><img src="http://farm8.staticflickr.com/7267/8152895052_e741ec5501.jpg" width="500" height="299" alt="IMAG0063"></a>
+#+END_HTML
+
+* 软件准备
+
++ [[http://archlinuxarm.org/os/ArchLinuxARM-oxnas-latest.tar.gz][oxnas RootFS]]
++ [[http://archlinuxarm.org/builder/xtools/x-tools.tar.xz][Cross Compiler (Arch x86\_64 专用)]]
++ [[https://github.com/seidler2547/kernel-oxnas820/archive/hmnhdce-2.6.31.14.zip][github 上的 2.6.31.14 版本的 Kernel 源代码]]
++ [[http://downloads.iomega.nas-central.org/Users/seidler2547/HMNHD-CE/kernel/][官方 2.6.31.14 版本的 Kernel 源代码]]
++ [[http://pan.baidu.com/share/link?shareid=42730&uk=1107847486#dir/path=%2FIomega%C2%AE%20Home%20Media%20Network%20Hard%20Drive%2C%20Cloud%20Edition][olderzeus 做好的 Arch/Debian 相关下载]]
++ [[http://www.openpandora.org/firmware/sources/RTL8192SU_usb_linux_v2.6.6.0.20110401.zip][能用于 2.6.31 版本 kernel 的 USB 网卡驱动]]
+
+经过测试，发现只有官方的 kernel 的代码是能够正常运行的。github 上的版本运行到
+
+#+begin_src sh
+[    0.710000] Reserving a DMA channel for ODRB
+[    0.710000] Allocating 475 SRAM generic DMA descriptors
+#+end_src
+
+
+就卡死了。
+
+* UBoot
+
+串口连接正常后，系统启动到 UBoot 时，我们可以键盘输入任意字符，进入 =UBoot Shell=
+
+
+#+begin_src sh
+IDE read: device 0 block # 288, count 1 ... 1 blocks read: OK
+Hit any key to stop autoboot:  0 
+PLX>>printenv
+bootcmd=run select0 load1 load_rd boot || run lightled select0 load2 load_rd extinguishled boot || lightled
+bootdelay=3
+baudrate=115200
+ethaddr=00:30:e0:00:00:01
+ipaddr=172.31.0.128
+serverip=172.31.0.100
+autoload=n
+netmask=255.255.0.0
+bootfile="uImage"
+select0=ide dev 0
+load1=ide read 0x60500000 50a 1644
+load2=ide read 0x60500000 e3e8 1644
+load_rd=ide read 0x60800000 4122 1644
+lightled=ledfail 1
+extinguishled=ledfail 0
+boot=bootm 60500000 60800000
+stdin=serial
+stdout=serial
+stderr=serial
+bootargs=root=/dev/sda1 console=ttyS0,115200 elevator=cfq mem=256M poweroutage=yes mac_adr=0x00,0xd0,0xb8,0x19,0x44,0x25
+#+end_src
+
+
+系统的 Kernel 在硬盘上存在两份。因此，我们可以用如下命令恢复系统的 =kernel=
+
+#+begin_src sh
+PLX>>ide read 0x60500000 e3e8 1644
+
+IDE read: device 0 block # 58344, count 5700 ... 5700 blocks read: OK
+PLX>>ide write 0x60500000 50a 1644
+
+IDE write: device 0 block # 1290, count 5700 ... 5700 blocks written: OK
+PLX>>ping 192.168.189.1
+Wait GMAC to reset
+Wait for PHY reset
+Ethernet Phy not recognised!
+Wait for link to come up..........Link up
+Wait for auto-negotiation to complete......................
+#+end_src
+
+由于网卡的特殊性，UBoot 这里暂时无法驱动网卡，因此，内建的 tftp boot 功能暂时无法使用。
+
+#+begin_src sh
+PLX>>ping 192.168.189.1
+Wait GMAC to reset
+Wait for PHY reset
+Ethernet Phy not recognised!
+Wait for link to come up..........Link up
+Wait for auto-negotiation to complete......................
+#+end_src
+
+到此，就只有拔电重启了。
+
+* Kernel
+
+我们把 x-tools 交叉编译工具解压缩到 =/export/iomega/gcc/x-tools/= ，稍作调整
+
+#+begin_src sh
+[luoyi@t410 /export/iomega/gcc/x-tools/arm-unknown-linux-gnueabi/bin]$ mkdir armbin
+[luoyi@t410 /export/iomega/gcc/x-tools/arm-unknown-linux-gnueabi/bin]$ cd armbin/
+[luoyi@t410 /export/iomega/gcc/x-tools/arm-unknown-linux-gnueabi/bin/armbin]$ ln -sf ../arm-unknown-linux-gnueabi-* .
+[luoyi@t410 /export/iomega/gcc/x-tools/arm-unknown-linux-gnueabi/bin/armbin]$ ls -al
+total 8
+drwxr-xr-x 2 luoyi users 4096 Nov  4 16:42 .
+drwxr-xr-x 3 luoyi users 4096 Nov  4 16:42 ..
+lrwxrwxrwx 1 luoyi users   38 Nov  4 16:42 arm-unknown-linux-gnueabi-addr2line -> ../arm-unknown-linux-gnueabi-addr2line
+lrwxrwxrwx 1 luoyi users   31 Nov  4 16:42 arm-unknown-linux-gnueabi-ar -> ../arm-unknown-linux-gnueabi-ar
+lrwxrwxrwx 1 luoyi users   31 Nov  4 16:42 arm-unknown-linux-gnueabi-as -> ../arm-unknown-linux-gnueabi-as
+...
+[luoyi@t410 /export/iomega/gcc/x-tools/arm-unknown-linux-gnueabi/bin]$ 
+#+end_src
+
+由于我们所用的 gcc 版本和官方不一致，所以还需要做一点 patch 
+
+#+begin_src sh
+[luoyi@t410 /export/iomega/kernel/nas-center/linux-2.6.31.14]$ diff -u fs/xfs/linux-2.6/xfs_iops.c{.orig,} 
+--- fs/xfs/linux-2.6/xfs_iops.c.orig	2012-11-04 22:53:26.647073528 +0800
++++ fs/xfs/linux-2.6/xfs_iops.c	2012-11-04 20:53:43.485978278 +0800
+@@ -493,7 +493,7 @@
+ }
+ 
+ #ifdef CONFIG_OXNAS_FAST_WRITES
+-extern inline loff_t i_tent_size_read(const struct inode *inode);
++extern loff_t i_tent_size_read(const struct inode *inode);
+ #endif // CONFIG_OXNAS_FAST_WRITES
+ 
+ STATIC int
+[luoyi@t410 /export/iomega/kernel/nas-center/linux-2.6.31.14]$ diff -u fs/stat.c{.orig,} 
+--- fs/stat.c.orig	2012-11-04 22:51:47.840390314 +0800
++++ fs/stat.c	2012-11-04 20:50:40.945938374 +0800
+@@ -19,7 +19,7 @@
+ #include <asm/unistd.h>
+ 
+ #ifdef CONFIG_OXNAS_FAST_WRITES
+-extern inline loff_t i_tent_size_read(const struct inode *inode);
++extern loff_t i_tent_size_read(const struct inode *inode);
+ #endif // CONFIG_OXNAS_FAST_WRITES
+ 
+ void generic_fillattr(struct inode *inode, struct kstat *stat)
+
+#+end_src
+
+
+然后就可以交叉编译 Kernel 了
+
+#+begin_src sh
+[luoyi@t410 /export/iomega/kernel/nas-center/linux-2.6.31.14]$ env PATH=/export/iomega/gcc/x-tools/arm-unknown-linux-gnueabi/bin/armbin/:$PATH CROSS_COMPILE=arm-unknown-linux-gnueabi- make -j4 uImage
+#+end_src
+
+编译完成，安装到自定义的 vroot 目录下：
+
+#+begin_src sh
+[luoyi@t410 /export/iomega/kernel/nas-center/linux-2.6.31.14]$ env PATH=/export/iomega/gcc/x-tools/arm-unknown-linux-gnueabi/bin/armbin/:$PATH CROSS_COMPILE=arm-unknown-linux-gnueabi- INSTALL_PATH=$(pwd)/vroot INSTALL_MOD_PATH=$(pwd)/vroot make  install
+...
+[luoyi@t410 /export/iomega/kernel/nas-center/linux-2.6.31.14]$ env PATH=/export/iomega/gcc/x-tools/arm-unknown-linux-gnueabi/bin/armbin/:$PATH CROSS_COMPILE=arm-unknown-linux-gnueabi- INSTALL_PATH=$(pwd)/vroot INSTALL_MOD_PATH=$(pwd)/vroot make  modules_install
+#+end_src
+
+编译完成后，用如下命令将 =uImage= 写入硬盘相应的位置
+
+#+begin_src sh
+dd if=./arch/arm/boot/uImage of=/dev/sdb seek=1290
+#+end_src
+
+
+* Initrd
+
+initrd 的 image 放在 /boot 目录下，名为 initrd.wrapped 。
+该文件是 uBoot 的 uImage 格式。我们需要用 
+[[http://www.isysop.com/wp-content/uploads/2012/06/uImage.py][uImage.py]] 
+脚本来处理它。由于这个 python 脚本是 python2 的，在最新的 Arch 上面需要应用如下 patch 使其正常工作：
+
+#+begin_src sh
+[luoyi@t410 /export/iomega/test]$ diff -u uImage.py.orig uImage.py
+--- uImage.py.orig	2012-11-04 14:42:49.159080953 +0800
++++ uImage.py	2012-11-04 14:42:54.582415177 +0800
+@@ -1,4 +1,4 @@
+-#!/usr/local/bin/python
++#!/usr/bin/env python2
+###############################################################################
+####
+#### (c) 2012 by Ollopa / www.isysop.com
+#
+#
+#+end_src
+
+uImage 文件的信息：
+
+#+begin_src sh
+[luoyi@t410 /export/iomega/test]$ file initrd.wrapped 
+initrd.wrapped: u-boot legacy uImage, , Linux/ARM, RAMDisk Image (gzip), 2652186 bytes, Fri Oct 12 23:26:43 2012, Load Address: 0x00000000, Entry Point: 0x00000000, Header CRC: 0x35EE9294, Data CRC: 0x22B6BA10
+[luoyi@t410 /export/iomega/test]$ ./uImage.py -l initrd.wrapped 
+Image name:	
+Created:	Fri Oct 12 23:26:43 2012
+Image type:	ARM Linux RAMDisk (gzip compressed)
+Data size:	2652186 Bytes
+Load Address:	0x000000
+Entry Point:	0x000000
+Header CRC:	0x35ee9294 ... OK
+Data CRC:	0x22b6ba10
+#+end_src
+
+用 uImage.py 解开 initrd.wrapped ，得到 image0 文件。
+然后，用 lsinitcpio 解开 image0 文件：
+
+#+begin_src sh
+[luoyi@t410 /export/iomega/test]$ ./uImage.py -x initrd.wrapped 
+
+[luoyi@t410 /export/iomega/test]$ ls
+image0  initrd.wrapped  uImage.py
+[luoyi@t410 /export/iomega/test]$ file image0 
+image0: gzip compressed data, was "initrd.cpio", from Unix, last modified: Fri Oct 12 23:25:31 2012
+[luoyi@t410 /export/iomega/test]$ lsinitcpio -xv image0 
+.
+lib
+lib/ld-linux.so.3
+lib/libselinux.so.1
+....
+[luoyi@t410 /export/iomega/test]$ ls
+bin  conf  etc  image0  init  initrd.wrapped  lib  sbin  scripts  uImage.py  usr
+#+end_src
+
+* Reference
+
++ [[http://iomega.nas-central.org/wiki/Hacking_%28Home_Media_CE%29][NAS-Center 的 Hacking 页面]]
++ [[http://iomega.nas-central.org/wiki/Stock_Configuration_%28Home_Media_CE%29][NAS-Center 的 Stock Configuration 页面]]
++ [[http://iomega.nas-central.org/wiki/Compiling_Software_and_kernel_%28Home_Media_CE%29][NAS-Center 的 Kernel Compile 页面]]
+

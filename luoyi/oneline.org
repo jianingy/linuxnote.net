@@ -1,0 +1,189 @@
+#+TITLE: One Line Command
+#+AUTHOR: Luo Yi
+#+EMAIL: luoyi.ly@gmail.com
+
+* One Line Command
+
+** OpenVPN for SBSetting 
+
+#+begin_src sh
+[luoyi@t410 ~/openvpn-config/ipad2]$ scp * root@192.168.1.108:/var/mobile/Library/OpenVPN
+root@192.168.1.108's password: 
+authfile                                                    100%   23     0.0KB/s   00:00    
+client.ovpn                                                 100%  310     0.3KB/s   00:00    
+qunar_vpn_ca.crt                                            100% 1318     1.3KB/s   00:00    
+qunar_vpn.crt                                               100% 3612     3.5KB/s   00:00    
+qunar_vpn.key                                               100%  891     0.9KB/s   00:00    
+ta.key                                                      100%  636     0.6KB/s   00:00    
+#+end_src
+
+SSH 到 ipad 里头，人肉 openvpn --config ./client.ovpn 一下，确认能用。然后重启。然后到 SBSetting 里头
+打开 OpenVPN。然后到 SSH 里头看：
+
+#+begin_src sh
+Pad:~ root# ps axuww |grep vpn
+root       286   0.0  0.4   276172   2052   ??  S    10:52PM   0:00.26 /usr/sbin/openvpn --config /private/var/mobile/Library/OpenVPN/client.ovpn --script-security 2
+root       314   0.0  0.1   264836    292 s000  R+   10:52PM   0:00.00 grep vpn
+iPad:~ root# ifconfig -a
+lo0: flags=8049<UP,LOOPBACK,RUNNING,MULTICAST> mtu 16384
+	inet 127.0.0.1 netmask 0xff000000 
+en0: flags=8863<UP,BROADCAST,SMART,RUNNING,SIMPLEX,MULTICAST> mtu 1500
+	inet 192.168.1.108 netmask 0xffffff00 broadcast 192.168.1.255
+	ether e0:b9:ba:e5:fe:00 
+en1: flags=8822<BROADCAST,SMART,SIMPLEX,MULTICAST> mtu 1500
+	ether e2:b9:ba:e5:fe:02 
+ppp0: flags=8011<UP,POINTOPOINT,MULTICAST> mtu 1500
+	inet 192.168.208.154 --> 192.168.208.153 netmask 0xffffffff 
+
+#+end_src
+
+这就算成功了。
+
+** 需要加的源
+
+#+begin_src sh
+# AppSync
+http://cydia.hackulo.us
+# WeiPhone
+http://apt.weiphone.com
+# 178
+http://apt.178.com
+# XBMC
+http://mirrors.xbmc.org/apt/ios
+#+end_src
+
+** Installous 下载目录
+
+#+begin_src sh
+/private/var/mobile/Documents/Installous/Downloads/
+#+end_src
+
+** GoodReader 目录（不同的机器，中间的 uuid 肯定不一样）
+
+#+begin_src sh
+/private/var/mobile/Applications/44F58CBC-53DF-4426-9A20-E5FA5C84D170/Documents
+#+end_src
+
+
+** HOME BGP
+
+BGP 设定备忘录
+
+#+begin_src sh
+[luoyi@t410 /tmp]$ telnet 10.8.0.1 2605
+Trying 10.8.0.1...
+Connected to 10.8.0.1.
+Escape character is '^]'.
+
+Hello, this is Quagga (version 0.99.15).
+Copyright 1996-2005 Kunihiro Ishiguro, et al.
+
+funnybox> en
+Password: 
+funnybox# conf t
+funnybox(config)# router bgp 65006 
+funnybox(config-router)# network 67.220.64.0/19 
+funnybox(config-router)# end
+funnybox# wr
+Configuration saved to /etc/quagga/bgpd.conf
+funnybox# end
+funnybox# 
+#+end_src
+
+** BASH read
+打开特定文件，一行一行读入
+
+#+begin_src sh
+exec 3< "MyFile"
+ 
+while read -u 3; do 
+    A=$(echo $REPLY |perl -F'\s+' -ane 'print  $F[0]') 
+    B=$(echo $REPLY |perl -F'\s+' -ane 'print  $F[1]') 
+    echo -e "$A\t$B"
+done  
+ 
+exec 3>&- 
+#+end_src
+
+** Perl Read 
+一次读入整个文件
+
+#+begin_src perl
+#!/usr/bin/env perl
+use strict;
+use utf8;
+
+binmode(STDIN, ":utf8");
+binmode(STDOUT, ":utf8");
+
+my $content = '';
+open my $fh, "<:encoding(UTF-8)", "$ARGV[0]" or die $!;
+{
+	local $/;
+	$content = <$fh>;
+}
+close $fh;
+#+end_src
+
+** SSH Config
+
+SSH 配置
+
+#+begin_src sh
+GSSAPIAuthentication no
+StrictHostKeyChecking no
+ControlMaster auto 
+ControlPath ~/.ssh/ssh-%r@%h:%p 
+ControlPersist yes
+#+end_src
+
+** XFCE4 Terminal 配置
+
+
+#+begin_src sh
+[luoyi@qt-luoyi luoyi]$ cat ~/.config/Terminal/terminalrc 
+[Configuration]
+MiscAlwaysShowTabs=FALSE
+MiscBell=FALSE
+MiscBordersDefault=TRUE
+MiscCursorBlinks=FALSE
+MiscCursorShape=TERMINAL_CURSOR_SHAPE_UNDERLINE
+MiscDefaultGeometry=80x24
+MiscInheritGeometry=FALSE
+MiscMenubarDefault=TRUE
+MiscMouseAutohide=FALSE
+MiscToolbarsDefault=FALSE
+MiscConfirmClose=TRUE
+MiscCycleTabs=TRUE
+MiscTabCloseButtons=TRUE
+MiscTabCloseMiddleClick=TRUE
+MiscTabPosition=GTK_POS_TOP
+MiscHighlightUrls=TRUE
+ScrollingLines=100000
+BackgroundMode=TERMINAL_BACKGROUND_TRANSPARENT
+BackgroundDarkness=0.800000
+TitleMode=TERMINAL_TITLE_REPLACE
+AccelFullscreen=
+#+end_src
+
+** VPN Server Iptables
+
+#+begin_src sh
+sudo iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+#+end_src
+
+
+** CHMFOX 快捷键
+
+Alt-Shift-m
+
+** Linux 中文文件名乱码
+
+convmv
+
+** cpan2rpm
+
+#+begin_src sh
+cpan2rpm --no-upgrade-chk --no-sign --make-no-test HTTP::Server::Simple
+#+end_src sh
+

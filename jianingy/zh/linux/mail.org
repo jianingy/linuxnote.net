@@ -1,0 +1,263 @@
+#+TITLE: Linux 个人邮件系统配置指南
+#+DATE:      2012-06-09 六
+#+AUTHOR:    Jianing Yang
+#+EMAIL:     jianingy.yang AT gmail DOT com
+#+DESCRIPTION:
+#+KEYWORDS:
+#+LANGUAGE:  zh
+#+OPTIONS:   H:3 num:t toc:t \n:nil @:t ::t |:t ^:nil -:t f:t *:t <:t
+#+OPTIONS:   TeX:t LaTeX:t skip:nil d:nil todo:t pri:nil tags:not-in-toc
+#+INFOJS_OPT: view:nil toc:nil ltoc:t mouse:underline buttons:0 path:http://orgmode.org/org-info.js
+#+EXPORT_SELECT_TAGS: export
+#+EXPORT_EXCLUDE_TAGS: noexport
+#+LINK_UP:
+#+LINK_HOME:
+#+XSLT:
+
+* 发送
+
+** Postfix SMTP Relay
+
+SMTP Relay 的最大好处是不用为每个应用程序单独进行邮件发送配置，一旦
+SMTP 配置好，任何程序都可以通过本地的 SMTP 服务发送邮件。下面简单介绍
+下 Postfix SMTP Relay 的配置方法。
+
+
+*** 主配置文件 - main.cf
+
+Postfix 的配置一般都放在 =/etc/postfix/= 这个目录下面。其中最主要的配
+置文件是 =main.cf= 。SMTP Relay 的配置方法大致如下：
+
+#+BEGIN_EXAMPLE
+
+# 默认 Relay 服务器配置，submission 是服务名称也可以换成端口号码，
+# 例如：587
+relayhost = [mail.exchangeserver.com]:submission
+
+# relayhost_map 文件用来指定一个发送者 和 Relay Server的对应关系
+# 可以根据发送者的不同选择不同的Relay Server
+sender_dependent_relayhost_maps = hash:/etc/postfix/relayhost_map
+
+# 用来进行邮件地址映射的配置文件。可以动态修改发送者的发送地址。
+# 具体用途请见下文
+smtp_generic_maps = regexp:/etc/postfix/generic
+
+# Relay 服务器认证
+smtp_sasl_auth_enable  = yes
+smtp_sasl_password_maps = hash:/etc/postfix/sasl_passwd
+
+# 本地 Postfix SSL 配置
+smtp_use_tls = yes
+smtp_sasl_security_options = noanonymous
+smtp_sasl_tls_security_options = noanonymous
+smtp_sasl_mechanism_filter = plain, login
+smtp_tls_note_starttls_offer = yes
+tls_random_source = dev:/dev/urandom
+smtp_tls_scert_verifydepth = 5
+smtp_tls_key_file  =/etc/postfix/ssl/smtpd.pem
+smtp_tls_cert_file = /etc/postfix/ssl/smtpd.pem
+smtp_tls_CAfile = /etc/postfix/ssl/smtpd.pem
+smtp_tls_enforce_peername = no
+smtpd_tls_ask_ccert = yes
+smtpd_tls_req_ccert = no
+smtpd_tls_loglevel = 1
+
+# 邮件大小限制
+message_size_limit = 1024000000
+mailbox_size_limit = 2048000000
+
+#+END_EXAMPLE
+
+*** Relay 服务器认证
+
+Relay 服务器的认证用的用户名和密码需要卸载 =sasl_passwd= 这个文件里面，
+
+#+BEGIN_EXAMPLE
+# 编辑完成后请使用：postmap hash:/etc/postfix/sasl_passwd 更新
+[mail.exchangeserver.com]:submission            WINDOWS-DOMAIN\USERNAME:PASSWORD
+#+END_EXAMPLE
+
+与 =main.cf= 不同，这个文件保存好后需要用 =postmap= 工具生成一个 hash
+索引，
+
+#+BEGIN_SRC sh
+postmap hash:/etc/postfix/sasl_passwd
+#+END_SRC
+
+*** Relay Map 配置
+
+=relayhost_map= 用来根据发件人选择不通的 relay 服务器，例如：
+
+#+BEGIN_EXAMPLE
+jianingy@localhost         [mail.berry.com]:submission
+root@localhost             [mail.cherry.com]:submission
+#+END_EXAMPLE
+
+让 jianingy@localhost 发出的邮件使用 =mail.berry.com= 转发出
+去，而让 root@localhost 发出的邮件通过 =mail.cherry.com= 转发。
+
+最后，这个配置编辑完成后也需要使用 =postmap= 生成hash 索引，
+
+#+BEGIN_SRC sh
+postmap hash:/etc/postfix/relayhost_map
+#+END_SRC
+
+*** Client does not have permission to send as this sender
+
+Postfix 用 exchange 服务器做 relay 的时候，很可能遇到这个错误。其原因
+在于，邮件体里面的 =From= 字段用的是我们自己机器的用户名和域名。这两个
+名称与 exchange 服务器上登录用户的名称不匹配。
+
+解决该问题的方法是，使用 =generic= 文件做一次邮件头改写，例如：
+
+#+BEGIN_EXAMPLE
+/jianingy@localhost$/ me@mycompany.com
+#+END_EXAMPLE
+
+这样，只要邮件头部出现 =jianingy@localhost= 这个地址，就会被自动替换成
+=me@mycompany.com= 了。
+
+不要忘记 =generic= 修改后，用 =postmap= 重新生成索引。
+
+
+* 接收
+
+我通过三个工具来完成邮件接收这项工作，
+
+1. 用来通过 POP3 协议获取邮件的 fetchmail
+2. 用来给邮件进行分类的 procmail
+3. IMAP 服务器 程序 UW-IMAP
+
+
+使用自己的 IMAP 服务器的好处是，你可以随心更换任何支持 IMAP 的邮件客户
+端，Outlook, FoxMail, Mutt, GNUS 随你喜欢。同时，邮件分类已经通过
+Procmail 在服务器端做好了。如此一来客户端只需要最简单的服务器地址等配
+置。
+
+** UW-IMAP
+
+注：本节大部分内容拷贝自 luoyi 同学的 IMAP 配置指南。
+
+*** mailbox 位置
+
+默认配置下，UW-IMAP 会假设用户的 mail 存在于：=$HOME= 下的各邮件文件
+（INBOX, Trash 等） 这些文件都是 mbx 格式的 =/var/spool/mail/$USER= 文件
+中 该文件是 mbox 格式的
+
+我们需要把默认的邮件目录修改为 =$HOME/mailbox= ，因此 apply 下面的 patch：
+
+#+BEGIN_SRC diff
+--- src/osdep/unix/env_unix.c.orig      2009-10-19 23:04:35.000000000 +0800
++++ src/osdep/unix/env_unix.c   2009-10-19 23:04:52.000000000 +0800
+@@ -66,7 +66,7 @@
+ static char *myServerName = NIL;/* server name */
+ static char *myLocalHost = NIL;        /* local host name */
+ static char *myNewsrc = NIL;   /* newsrc file name */
+-static char *mailsubdir = NIL; /* mailbox subdirectory name */
++static char *mailsubdir = "mailbox";   /* mailbox subdirectory name */
+ static char *sysInbox = NIL;   /* system inbox name */
+ static char *newsActive = NIL; /* news active file */
+ static char *newsSpool = NIL;  /* news spool */
+#+END_SRC
+
+大牛们都会有些奇怪的脾气，Mark Crispin 就不喜欢用配置文件，他推荐大家这
+样直接对源代码打 patch 来实现你要的功能（其实软件中的 dorc 函数可以在启
+动时载入用户配置，可是作者标注了：Don't use this feature）。
+
+*** mbx 文件格式
+
+UW-IMAP 包采用了一种被称为 mbx 的私有文件格式，它的主要特点有：
+
+- 支持多 folder，并且一个 folder 就是一个文件
+- 文件内建索引数据，可高效地支持大量邮件
+- 邮件的原文被 append 到文件的末尾 —— 这个很类似于 mbox
+
+UW-IMAP 软件包提供了 mailutil 和 dmail 两个程序用来操作 mbx 文件格式。
+在下面的示例中，我们假设程序已经把 mailsubdir 设为 "mailbox"：
+
+    新建 folder
+
+#+BEGIN_EXAMPLE
+[luoyi@lancelot ~]$ mailutil create "#driver.mbx/INBOX"
+[luoyi@lancelot ~]$ mailutil create "#driver.mbx/Trash"
+#+END_EXAMPLE
+
+这两个命令新建了 INBOX 和 Trash 两个文件，分别对应客户端的 “收件箱” 和 “垃圾箱” 两个目录。
+
+** Procmail
+
+
+*** 配置模板
+
+#+BEGIN_EXAMPLE
+HOME=/home/jianingy
+MAILDIR="$HOME/mailbox"
+LOGFILE="/tmp/procmail.log"
+DECODE_SUBJECT=`formail -c -x 'Subject: ' | $HOME/local/bin/m64decode`
+DECODE_FROM=`formail -c -x 'From: ' | $HOME/local/bin/m64decode`
+VERBOSE=yes
+
+###垃圾分类##############################################################
+
+# 按照标题分类（支持中文）
+:0 :
+ * $ DECODE_SUBJECT ?? 欢迎|庆祝|新人|再见|报道|报到|突破|新丁
+| dmail +Greetings
+
+# 按照来源分类
+:0 :
+ * $ DECODE_FROM ?? club@example.com
+| dmail +Club
+
+# 按目标分类
+:0 :
+ * (^FROM_DAEMON|^TO).*target@example.com
+|dmail +Target
+
+# 默认邮箱
+:0 :
+| dmail +INBOX
+
+#+END_EXAMPLE
+
+*** base64 编码标题解码脚本 - m64decode
+
+#+BEGIN_SRC perl
+#!/usr/bin/perl
+
+while (<>) {
+	chomp;
+	s/^[ \t]//;
+	foreach (split(/(=[?].*?[?][BQ][?].*?[?]=)/i)) {
+		if (($charset, $encoding, $txt) = /=[?](.*?)[?]([bq])[?](.*?)[?]=/i) {
+			$encoding =~ tr/[BQ]/[bq]/;
+			$charset = 'gbk' if $charset =~ /x-gbk/i or $charset =~ /iso8859/i;
+			open PIPE, "echo '$txt' | base64 -i -d | iconv -f $charset -t utf-8 -c |";
+			$_ = <PIPE>;
+			close PIPE;
+			chomp;
+		}
+		print $_;
+	}
+}
+#+END_SRC
+
+** Fetchmail
+
+下面是一个 fetchmail 的配置模板，
+
+#+BEGIN_EXAMPLE
+set postmaster "local_user"
+set bouncemail
+set no spambounce
+set properties ""
+poll pop3.server.com with proto POP3 port 995 uidl
+	user 'pop3_username' there with password 'pop3_password' is 'local_user' here ssl mda "/usr/bin/procmail -d %T"
+#+END_EXAMPLE
+
+将这个文件保存为 =~/.fetchmailrc= 。同时把 =pop3_username= 和
+=pop3_password= 修改为自己在 pop3 服务器上的用户名和密码即可。配置模板
+中所有 "local_user" 的部分要被替换成你在自己机器上的用户名。
+
+这里需要注意的是，如果 username 是 WINDOWS 域用户，那么分割符需要逃逸。
+例如：用户 "company-bj\jianingy" 需要被写成 "compnay-bj\\jianingy"。

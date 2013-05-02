@@ -1,0 +1,15 @@
+#+TITLE: Shell Basic 
+#+AUTHOR: Whj
+#+EMAIL: wfast888@hotmail.com
+#+OPTIONS: H:2 num:nil toc:t \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+- [[file:index.org][GO BACK]]
+
+* Python print format
+#+begin_example
+int1=int(111)
+string1="aaaaa"
+print "%s%d%s%d"% (string1,int1,string1,int1)
+aaaa111aaaaa111
+>>> print "%s-%d-%s-%d"% (string1,int1,string1,int1)
+aaaaa-111-aaaaa-111
+#+end_example

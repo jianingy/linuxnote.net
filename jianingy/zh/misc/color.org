@@ -1,0 +1,27 @@
+#+TITLE: 如何自动产生图表中的颜色
+#+AUTHOR: Jianing YANG
+#+EMAIL: jianingy.yang@gmail.com
+
+* 如何自动产生图表中的颜色
+
+自动绘制图表时由于不能确定图例的数量，因此需要动态产生一些颜色。动态产
+生的出的颜色在一般情况下至少需要有较大的区分度。为了达到这个目的，我们
+需要使用 [[http://en.wikipedia.org/wiki/HSL_and_HSV][HSV 颜色空间]] 。在 HSV 颜色空间中，由于色度是一个单独的属性(H)，
+这让我们可以根据色度进行均分，来产生区分度较大的颜色。如果需要的颜色较
+多，还可以在亮度(V)上进行适当的区分。下面给出一个简单的 Python 实现及
+其效果。
+
+#+BEGIN_SRC python
+def colors(n):
+    from colorsys import hsv_to_rgb
+
+    for x in xrange(n):
+        rgb = list(hsv_to_rgb(x * 1.0 / n, 0.5, 0.8))
+        rgb[0] = "%x" % int(rgb[0] * 256)
+        rgb[1] = "%x" % int(rgb[1] * 256)
+        rgb[2] = "%x" % int(rgb[2] * 256)
+        yield "".join(rgb)
+#+END_SRC
+
+#+CAPTION: n = 24 时产生的颜色(第一行 v = 0.9, 第二行 v = 0.5)
+[[file:images/generated-colors.png]]

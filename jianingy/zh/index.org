@@ -1,0 +1,52 @@
+#+TITLE: jianingy 的个人页面 (中文)
+#+AUTHOR: Jianing YANG
+
+
+* 计算机网络
+** [[file:network/routeros.org][RouterOS 配置基础]]
+
+经济强大的家庭及SOHO网络设备。功能齐全、性能出众。
+
+** [[file:network/c3560.org][C3560 配置小记]]
+
+C3560 配置笔记
+
+** [[file:network/squid-l7-routing.org][基于 SQUID 的七层路由]]
+
+* Linux
+
+** [[file:linux/serial.org][Linux 串口控制台配置合集]]
+
+介绍当今主流系统上的 console 配置方法
+
+** [[file:linux/mail.org][Linux 个人邮件系统配置指南]]
+
+* Emacs
+
+** [[file:emacs/blorgit.org][Blorgit]]
+
+一个用Ruby + Emacs编写的内容发布系统。可将Org-Mode语法的文件转换为HTML
+页面。同时支持大量Org-Babel功能。
+
+** [[file:emacs/miscellaneous.org][大杂烩]]
+* 程序设计
+
+** [[file:django/best-practice.org][Django Best Practice]]
+
+Django 是一个 Python 的 Web 框架，很合适做快速 Web 开发。这里记录了一些
+Django 的编码技巧和使用心得。
+
+** [[file:ocaml/godi.org][OCaml GODI]]
+** [[file:ocaml/snippets.org][OCaml Code Snippets]]
+
+* 博客
+
+** [[file:blog/2012.org][2012年]]
+
+* 搞笑收集
+
+** [[file:fun/indian-movies.org][印度电影中各种开挂片段]]
+* 大杂烩
+
+** [[file:misc/ntp-leap-second.org][内核润秒 BUG 分析]]
+** [[file:misc/color.org][如何自动产生图表中的颜色]]

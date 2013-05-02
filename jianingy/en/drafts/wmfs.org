@@ -1,0 +1,145 @@
+#+TITLE: WMFS (A Window Manager From Scratch)
+#+AUTHOR: Jianing YANG <jianingy.yang dot gamil.com>
+#+OPTIONS: H:3 num:nil toc:t \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+
+* Introduction to WMFS
+
+WMFS is my current window manager. I choose it because of two reasons.
+First, it is a tiled window manager which means that the window
+manager could arrange various windows according to some mathmatical
+pattern. Otherwise, I may need to place them in a comfortable way
+everytime I open a new one. Second, I like its configuration style. I
+admit that LUA as configuration is pretty cool. However, since I am
+not familiar with LUA, WMFS offers me a good start.
+
+Here comes a screenshot of my desktop,
+
+[[wmfs-screenshot.png][wmfs-screenshot-thumb.png]]
+
+* Configuration
+
+** Fonts
+
+I use "PF Tempesta Seven", a beatiful samll font, as default font for WMFS.
+
+#+begin_example
+[misc]
+        font                  = "PF Tempesta Seven:style=Regular:pixelsize=8"
+[/misc]
+#+end_example
+
+** SysTray
+
+When there are multiple monitors, wmfs enables us to fix the systray on only one of them.
+
+#+begin_example
+[bar]
+  [systray]
+    # Enable/disable systray
+    active = true
+
+    # Screen of systray
+    screen = 0
+
+    # Spacing between tray icons
+    spacing = 3
+  [/systray]
+[/bar]
+#+end_example
+
+** Layouts
+
+We can define a layout menu and put frequent layout into it. It is
+better to associate each layout with a thumb so that it will be easier
+to figure out what is the current layout and how the layout gonna
+place windows. Fortunately, there is no need to draw our own thumbs. A
+sample is avaiable at [[http://ompldr.org/vOHN3dA]]. Unfortunately, it
+seems that the path to the thumb file must be absolute path.
+
+#+begin_example
+[layouts]
+
+    [layout]
+        type = "tile_right"
+        symbol = "\i[13;4;15;13;/home/jianingy/.config/wmfs/bl/tr.png]\"
+    [/layout]
+    [layout]
+        type = "tile_left"
+        symbol = "\i[13;4;15;13;/home/jianingy/.config/wmfs/bl/tl.png]\"
+    [/layout]
+
+    [layout]
+        type = "tile_top"
+        symbol = "\i[13;4;15;13;/home/jianingy/.config/wmfs/bl/tt.png]\"
+    [/layout]
+    [layout]
+        type = "tile_bottom"
+        symbol = "\i[13;4;15;13;/home/jianingy/.config/wmfs/bl/tb.png]\"
+    [/layout]
+
+    [layout]
+        type = "tile_grid"
+        symbol = "\i[13;4;15;13;/home/jianingy/.config/wmfs/bl/tg.png]\"
+    [/layout]
+    [layout]
+        type = "tile_grid_vertical"
+        symbol = "\i[13;4;15;13;/home/jianingy/.config/wmfs/bl/tg.png]\"
+    [/layout]
+
+
+    [layout]
+        type = "mirror_vertical"
+        symbol = "\i[13;4;15;13;/home/jianingy/.config/wmfs/bl/mv.png]\"
+    [/layout]
+    [layout]
+        type = "mirror_horizontal"
+        symbol = "\i[13;4;15;13;/home/jianingy/.config/wmfs/bl/mh.png]\"
+    [/layout]
+
+    # Other layouts.
+    [layout]
+        type = "max"
+        symbol = "\i[13;4;15;13;/home/jianingy/.config/wmfs/bl/max.png]\"
+    [/layout]
+    [layout]
+        type = "free"
+        symbol = "\i[13;4;15;13;/home/jianingy/.config/wmfs/bl/fr.png]\"
+    [/layout]
+[/layouts]
+
+#+end_example
+
+
+** Tags
+
+Tags is something like workspaces in other window managers such as
+gnome and KDE. Like other window managers, its name can be customized.
+For example, mine follows the name of dragons in Azeroth World. The
+setting of tags can be different to each monitor, not only its name
+but also default layout.
+
+#+begin_example
+[tags]
+    [tag]
+            name             = "1/Onyxia"
+            screen           = 0
+            mwfact           = 0.85
+            nmaster          = 1
+            layout           = "tile_bottom"
+            resizehint       = false
+            infobar_position = "top"
+            above_fc         = false
+            #[mouse] [/mouse] Possible multi mouse section
+    [/tag]
+
+    # screen 0
+    [tag] name = "2/Sindragosa"   layout = "tile_grid" screen = 0 [/tag]
+    [tag] name = "3/Saragosa"     layout = "tile_grid" screen = 0 [/tag]
+    [tag] name = "4/Tyrygosa"     layout = "tile_grid" screen = 0 [/tag]
+
+    # screen 1
+    [tag] name = "1/Azeroth"      layout = "free"      screen = 1 [/tag]
+    [tag] name = "2/Outland"      layout = "free"      screen = 1 [/tag]
+    [tag] name = "3/Northenland"  layout = "free"      screen = 1 [/tag]
+[/tags]
+#+end_example

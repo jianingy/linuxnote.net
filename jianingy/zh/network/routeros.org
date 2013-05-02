@@ -1,0 +1,6 @@
+#+TITLE: RouterOS 配置基础 （基于RB750系列）
+#+AUTHOR: Jianing YANG
+#+EMAIL: jianingy.yang@gmail.com
+#+OPTIONS: H:2 num:nil toc:t \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+
+THIS PAGE HAS BEEN MOVED TO [[file:../../../wiki/routeros.org]]

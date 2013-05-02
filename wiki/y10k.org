@@ -1,0 +1,77 @@
+#+TITLE: Linux 系统运维 FAQ
+#+DATE: Wed 13 Jun 2012 04:08:40 PM CST
+#+AUTHOR: Jianing Yang
+#+OPTIONS: ^:nil H:2 toc:t
+
+* 为什么不能用 cp 而要用 install 更新二进制和 so 文件
+:PROPERTIES:
+:COMMITER: jianingy
+:END:
+
+From: http://en.chys.info/2009/05/install-vs-cp-and-mmap/
+
+#+BEGIN_QUOTE
+If we hand write a Makefile, we should always stick to install instead
+of using cp for the installation commands. Not only is it more
+convenient, but it does things right (cp does things wrong).
+
+For example, if we attempt to update /bin/bash, which is currently
+running, with “cp ... /bin/bash”, we get a “text busy” error. If we
+attempt to update /lib/libc.so.6 with “cp ... /lib/libc.so.6”, then we
+either get “text busy” (in ancient versions of Linux) or breaks each
+and every running program within a fraction of a second (in recent
+versions of Linux). install does the thing right in both situations.
+
+The reason why cp fails is that it simply attempts to open the
+destination file in write-only mode and write the new contents. This
+causes problem because Linux (and all contemporary Unices as well as
+Microsoft Windows) uses memory mapping (mmap) to load executables and
+dynamic libraries.
+
+The contents of an executable or dynamic library are mmap’d into the
+linear address space of relevant processes. Therefore, any change in
+the underlying file affects the mmap’d memory regions and can
+potentially break programs. (MAP_PRIVATE guarantees changes by
+processes to those memory regions are handled by COW without affecting
+the underlying file. On the contrary, POSIX leaves to implementations
+whether COW should be used if the underlying file is modified. In
+fact, for purpose of efficiency, in Linux, such modifications are
+visible to processes even though MAP_PRIVATE may have be used.)
+
+There is an option MAP_DENWRITE which disallows any modification to
+the underlying file, designed to avoid situations described above.
+Executables and dynamic libraries are all mmap’d with this option.
+Unfortunately, it turned out MAP_DENYWRITE became a source of DoS
+attacks, forcing Linux to ignore this option in recent versions.
+
+Executables are mmap’d by the kernel (in the execve syscall). For
+kernel codes, MAP_DENYWRITE still works, and therefore we get “text
+busy” errors if we attempt to modify the executable.
+
+On the other hand, dynamic libraries are mmap’d by userspace codes
+(for example, by loaders like /lib/ld-linux.so). These codes still
+pass MAP_DENYWRITE to the kernel, but newer kernels silently ignores
+this option. The bad consequence is that you can break the whole
+system if you think you’re only upgrading the C runtime library.
+
+Then, how does install solve this problem? Very simple – unlinking the
+file before writing the new one. Then the old file (no longer present
+in directory entries but still in disk until the last program
+referring to it exits) and the new file have different inodes.
+Programs started before the upgrading (continuing using the old file)
+and those after the upgrading (using the new version) will both be
+happy.
+#+END_QUOTE
+
+
+** 缩减翻译版
+
+二进制和 SO 文件都是 /mmap/ 到内存里的。磁盘文件一改变，内存里的副本也
+就同时改变了。因此正在跑的程序会因为内存访问出错挂掉。
+
+/cp/ 是把文件用 /write-only/ 模式打开然后写内容。因此，由上述原因知，
+/cp/ 更新此类文件会导致程序崩溃。
+
+/install/ 是先 /unlink/ (也就是删除) 磁盘上的文件，然后再创建一个新文件。
+实际上写的不是一个 /inode/ 节点的内容。因此，正在运行的程序还是用的老二
+进制或者 SO 文件。只有新启动的程序会使用升级了的二进制或者 SO。

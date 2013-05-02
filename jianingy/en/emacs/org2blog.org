@@ -1,0 +1,53 @@
+#+TITLE: Blog with Org2Blog
+#+AUTHOR: Jianing YANG
+#+EMAIL: jianingy.yang@gmail.com
+#+OPTIONS: H:3 num:nil toc:t \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+* Installtion
+
+** Get the codes
+
+1. Get org2blog from [[https://github.com/punchagan/org2blog][punchagan's github]].
+2. Get xml-rpc from [[https://launchpad.net/xml-rpc-el][its lanuchpad page]].
+
+** Configure emacs
+
+*** Load required modules
+
+#+begin_src emacs-lisp +n -r
+;; {{ include org2blog
+(require 'xml-rpc)
+(require 'org2blog-autoloads)
+;; }}
+#+end_src
+
+*** Configure WordPress API
+
+If no password specified, org2blog will prompt for password every time
+it's going to publish an entry.
+
+#+begin_src emacs-lisp +n -r
+(setq org2blog/wp-blog-alist
+      '(("wordpress"
+         :url "http://something.wordpress.com/xmlrpc.php"
+         :username "jianingy"
+         :default-title "Untitled Blog"
+         :default-categories ("org2blog")
+         :tags-as-categories nil)))
+#+end_src
+
+* Publish a blog with org-mode
+
+1. Log into your wordpress system by M-x org2blog/wp-login.
+2. Start a new entry with M-x org2blog/wp-new-entry.
+3. Write a blog using common org-mode syntax.
+4. Publish current buffer as a draft with M-x org2blog/wp-post-buffer
+5. If everything looks great, use M-x org2blog/wp-post-buffer-and-publish to publish your blog.
+
+* Useful Tips
+
+- The default behaviour of org2blog/wp-post-subtree is to post a
+  subtree as a draft. To publish it, use C-u M-x
+  org2blog/wp-post-subtree.
+
+- There is a bug in org-mode within releases between 7.4 to 7.5. It
+  leads to a HTML layout disorder. To fix it, refer to [[http://orgmode.org/w/?p=org-mode.git;a=blobdiff;f=lisp/org-html.el;h=9361af0b88ddb65b8e11c629ec5cabbf5d5a4883;hp=333cf4df66cd1c81ffb248669ce9be3cbfc56d24;hb=44684a9977f5331d7c3fb0d6e445b99bda0990af;hpb=3151ef60bebdd0ff3f67e18b99ba625a983c862f][this patch]]

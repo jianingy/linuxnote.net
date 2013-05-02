@@ -1,0 +1,11 @@
+#+TITLE: whj@linuxnote.net
+
+* Whj's homepage
+- [[file:network/index.org][network]]
+- [[file:linux/index.org][linux]]
+- [[file:shell/index.org][shell]]
+- [[file:python/index.org][python]]
+- [[file:http/index.org][http]]
+
+* Life
+Get awesome pics from [[http://babe.1626.com/][sunshine]]

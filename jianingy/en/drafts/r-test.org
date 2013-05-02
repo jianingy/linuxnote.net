@@ -1,0 +1,99 @@
+#+STARTUP: inlineimages
+
+* Time Series
+
+#+begin_src R :results output graphics :file huron1.png :width 580 :height 280
+par(bg="transparent", col=5, col.sub=5, col.axis=5, col.main=5, col.lab=5)
+plot(LakeHuron, ylab="", main="Level of Lake Huron")
+#+end_src
+
+#+results:
+[[file:/tmp/huron1.png]]
+
+#+begin_src R :results output graphics :file sunspot1.png :width 580 :height 280
+par(bg="transparent", col=5, col.sub=5, col.axis=5, col.main=5, col.lab=5)
+x <- window(sunspots, start=1750, end=1800)
+plot(x,
+     type = 'p',
+     ylab = "",
+     main = "Sunspot numbers")
+k <- 20
+lines( filter(x, rep(1/k, k)), col = 'red', lwd = 3)
+#+end_src
+
+#+results:
+[[file:/tmp/sunspot1.png]]
+#+begin_src R :results output graphics :file ukgas1.png :width 580 :height 280
+par(bg="transparent", col=5, col.sub=5, col.axis=5, col.main=5, col.lab=5)
+data(UKgas)
+plot.band <- function (x, ...) {
+  plot(x, ...)
+  a <- time(x)
+  i1 <- floor(min(a))
+  i2 <- ceiling(max(a))
+  y1 <- par('usr')[3]
+  y2 <- par('usr')[4]
+  if( par("ylog") ){
+    y1 <- 10^y1
+    y2 <- 10^y2
+  }
+  for (i in seq(from=i1, to=i2-1, by=2)) {
+    polygon( c(i,i+1,i+1,i),
+             c(y1,y1,y2,y2),
+             col = 'grey',
+             border = NA )
+  }
+  par(new=T)
+  plot(x, ...)
+}
+plot.band(UKgas,
+          log = 'y',
+          ylab = "",
+          main = "UK gas consumption")
+#+end_src
+
+#+results:
+[[file:/tmp/ukgas1.png]]
+
+#+begin_src R :results output graphics :file huron2.png :width 640 :height 640
+par(bg="transparent", col=5, col.sub=5, col.axis=5, col.main=5, col.lab=5)
+x <- window(LakeHuron)
+n <- length(x)
+k <- 5
+m <- matrix(nr=n+k-1, nc=k)
+colnames(m) <- c("x[i]", "x[i-1]", "x[i-2]",
+                 "x[i-3]", "x[i-4]")
+for (i in 1:k) {
+  m[,i] <- c(rep(NA,i-1), x, rep(NA, k-i))
+}
+pairs(m,
+      gap = 0,
+      lower.panel = panel.smooth,
+      upper.panel = function (x,y) {
+        panel.smooth(x,y)
+        par(usr = c(0, 1, 0, 1))
+        a <- cor(x,y, use='pairwise.complete.obs')
+        text(.1,.9,
+             adj=c(0,1),
+             round(a, digits=2),
+             col='yellow',
+             cex=2*a)
+      })
+title("Lake Huron levels: autocorrelations",
+      line = 3)
+#+end_src
+
+#+results:
+[[file:/tmp/huron2.png]]
+
+* Simple test
+#+begin_src R :results output graphics :file sample1.png :width 580 :height 280
+par(bg="transparent", col=5, col.sub=5, col.axis=5, col.main=5, col.lab=5)
+x <- rnorm(100, sd=3)
+plot(x, type='p')
+k <- 100
+
+#+end_src
+
+#+results:
+[[file:/tmp/sample1.png]]

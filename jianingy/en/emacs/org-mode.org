@@ -1,0 +1,39 @@
+#+TITLE: Org-Mode
+#+AUTHOR: Jianing YANG
+#+EMAIL: jianingy.yang@gmail.com
+#+OPTIONS: H:3 num:nil toc:t \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+
+* Insert New Files into Org-Mode Agenda Buffer
+
+- org-agenda-file-to-front :: insert the current file at the beginning of =org-agenda-files=
+- org-remove-file :: remove the current file from =org-agenda-files=
+
+* Timestamp Operations
+- C-c ! :: create an inactive timestamp
+#+begin_example
+S-<left>     (org-timestamp-down-day)
+S-<right>     (org-timestamp-up-day)
+Change date at cursor by one day. These key bindings conflict with shift-selection and related modes (see Conflicts).
+S-<up>     (org-timestamp-up)
+S-<down>     (org-timestamp-down-down)
+Change the item under the cursor in a timestamp. The cursor can be on a year, month, day, hour or minute. When the timestamp contains a time range like ‘15:30-16:30’, modifying the first time will also shift the second, shifting the time block with constant length. To change the length, modify the second time. Note that if the cursor is in a headline and not at a timestamp, these same keys modify the priority of an item. (see Priorities). The key bindings also conflict with shift-selection and related modes (see Conflicts).
+#+end_example
+
+* Reset Checkboxes on Parent Item Done
+1) Require org-checklist =(require 'org-checklist)=
+2) Set property =RESET_CHECKBOX= to =t=
+
+* Align Tags
+
+=M-x org-agenda-align-tags=
+
+* Insert Hyberlinks
+
+- C-c l :: store a link
+- C-c C-l :: paste a link
+
+* Log Mode in Agenda View
+
+In agenda view, press 'l' (Lowercase L) to turn on log mode that shows
+finished task and closed item. More commands in Agenda view please
+refer to http://orgmode.org/manual/Agenda-commands.html
