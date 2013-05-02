@@ -18,6 +18,7 @@
             <li><a href="./jianingy/zh/linux/mail.html">Linux 个人邮件系统配置指南</a></li>
         </ul>
 </div>
+<div class="span1">
 <div class="span4">
     <h2>Emacs</h2>
         <ul>
