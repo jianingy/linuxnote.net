@@ -1,0 +1,35 @@
+#+TITLE: CubieBoard Info
+#+AUTHOR: Luo Yi <luoyi.ly AT gmail.com>
+
+* URL
+[[http://andre.blaatschaap.be/2013/01/installing-archlinuxarm-on-the-cubieboard/][Installing ArchLinuxARM on the CubieBoard]]
+
+[[http://dl.cubieboard.org/software/android/cubiebox_tvbox_rel2.2.img][能用的 Android]]
+
+
+
+
+#+begin_src sh
+[luoyi@qt-luoyi berryboot]$ sudo kpartx -a -v  berryboot-cubieboard-beta6.img 
+add map loop0p1 (254:0): 0 122880 linear /dev/loop0 2048
+[luoyi@qt-luoyi berryboot]$ sudo mount /dev/mapper/loop0p1 /media/usb/
+[luoyi@qt-luoyi usb]$ ls -al
+total 29522
+drwxr-xr-x 2 root root    16384 Jan  1  1970 .
+drwxr-xr-x 3 root root     4096 May  7  2012 ..
+-rwxr-xr-x 1 root root  8170528 Mar 21 15:21 berryboot.img
+-rwxr-xr-x 1 root root    17764 Mar 21 15:21 bootcode.bin
+-rwxr-xr-x 1 root root       64 Mar 21 15:21 cmdline.txt
+-rwxr-xr-x 1 root root      163 Mar 21 15:21 config.txt
+-rwxr-xr-x 1 root root     2261 Mar 21 15:21 fixup_cd.dat
+-rwxr-xr-x 1 root root     5897 Mar 21 15:21 fixup.dat
+-rwxr-xr-x 1 root root  3609232 Mar 21 15:21 kernel_a10_aufs.img
+-rwxr-xr-x 1 root root  2753200 Mar 21 15:21 kernel_rpi_aufs.img
+-rwxr-xr-x 1 root root    30776 Mar 21 15:21 LICENSE.berryboot
+-rwxr-xr-x 1 root root    45004 Mar 21 15:21 script.bin
+-rwxr-xr-x 1 root root 12294570 Mar 21 15:21 shared.tgz
+-rwxr-xr-x 1 root root   569176 Mar 21 15:21 start_cd.elf
+-rwxr-xr-x 1 root root  2694708 Mar 21 15:21 start.elf
+-rwxr-xr-x 1 root root      413 Mar 21 15:21 uEnv.txt
+
+#+end_src sh
