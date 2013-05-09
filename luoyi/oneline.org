@@ -185,11 +185,11 @@ convmv
 
 #+begin_src sh
 cpan2rpm --no-upgrade-chk --no-sign --make-no-test HTTP::Server::Simple
-#+end_src sh
+#+end_src
 
 ** SAMBA 4.0 匿名用户访问
 
 #+begin_src sh
 	security = user
 	map to guest = Bad User
-#+end_src sh
+#+end_src

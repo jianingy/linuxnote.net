@@ -32,4 +32,4 @@ drwxr-xr-x 3 root root     4096 May  7  2012 ..
 -rwxr-xr-x 1 root root  2694708 Mar 21 15:21 start.elf
 -rwxr-xr-x 1 root root      413 Mar 21 15:21 uEnv.txt
 
-#+end_src sh
+#+end_src
