@@ -35,3 +35,22 @@ drwxr-xr-x 3 root root     4096 May  7  2012 ..
 -rwxr-xr-x 1 root root      413 Mar 21 15:21 uEnv.txt
 
 #+end_src
+
+* Mini USB wifi
+
+#+begin_src sh
+[91956.934820] usb 2-1.1: new high-speed USB device number 3 using ehci-pci
+[91957.538903] rtl8192cu: Chip version 0x10
+[91957.685377] rtl8192cu: MAC address: e8:4e:06:06:7b:43
+[91957.685384] rtl8192cu: Board Type 0
+[91957.685887] rtlwifi: rx_max_size 15360, rx_urb_num 8, in_ep 1
+[91957.685930] rtl8192cu: Loading firmware rtlwifi/rtl8192cufw.bin
+[91957.686302] usbcore: registered new interface driver rtl8192cu
+[91957.757657] ieee80211 phy1: Selected rate control algorithm 'rtl_rc'
+[91957.758124] rtlwifi: wireless switch is on
+#+end_src
+
+#+begin_src sh
+modprobe lcd && modprobe hdmi && modprobe fbcon
+disp.screen0_output_type=3 disp.screen0_output_mode=1920x1080p60
+#+end_src
