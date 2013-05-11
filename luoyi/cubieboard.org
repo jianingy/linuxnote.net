@@ -6,6 +6,8 @@
 
 [[http://dl.cubieboard.org/software/android/cubiebox_tvbox_rel2.2.img][能用的 Android]]
 
+[[http://rhombus-tech.net/allwinner_a10/][A10 Info]]
+
 
 
 
