@@ -1,10 +1,23 @@
-#+TITLE: CubieBoard Info
+#+TITLE: Run Arch Linux With CubieBoard
 #+AUTHOR: Luo Yi <luoyi.ly AT gmail.com>
+
+* 安装 ArchLinuxARM 基本系统
+
+** 硬件准备
+
+- 一张 8G 以上的 SD 卡
+
+- USB to TTL 线
+
+- 一台支持 HDMI 输入的显示器或者电视机
+
+- 一个 USB Hub，接上配套的鼠标键盘
 
 * URL
 [[http://andre.blaatschaap.be/2013/01/installing-archlinuxarm-on-the-cubieboard/][Installing ArchLinuxARM on the CubieBoard]]
 
 [[http://dl.cubieboard.org/software/android/cubiebox_tvbox_rel2.2.img][能用的 Android]]
+[[http://ssvb.github.io/2013/02/01/new-xf86-video-sunxifb-ddx-driver.html][New xf86-video-sunxifb DDX driver for Xorg]]
 
 
 
