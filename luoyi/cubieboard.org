@@ -13,6 +13,48 @@
 
 - 一个 USB Hub，接上配套的鼠标键盘
 
+** SD 卡分区
+
+我们需要把 SD 卡的全部空间分为 3 部分：
+
+- 32M Free 空间，无任何文件系统格式，主要放 u-Boot 等引导程序。
+
+- 128M ext2/fat16 文件系统，里面放 CubieBoard 引导用的 script.bin 、 uImage 、uEnv.txt 等文件
+
+- 剩余所有的空间分为一个 ext4 文件系统。这是我们的 RootFS。
+
+** 写入 u-Boot 
+
+
+下载 [[http://dl.linux-sunxi.org/users/amery/sunxi-3.0/latest/cubieboard_hwpack.tar.xz][最新的 CubieBoard HardWare Package]]，解压缩：
+
+
+#+begin_src sh
+[luoyi@qt-luoyi a]$ tar xf cubieboard_hwpack.tar.xz 
+[luoyi@qt-luoyi a]$ ls -al
+total 9884
+drwxr-xr-x  5 luoyi users     4096 May 17 11:59 .
+drwxrwxrwt 33 root  root     36864 May 17 11:58 ..
+drwxr-xr-x  2 luoyi users     4096 May 17 11:59 bootloader
+-rw-r--r--  1 luoyi users 10050012 May 17 11:59 cubieboard_hwpack.tar.xz
+drwxr-xr-x  2 luoyi users     4096 May 17 11:59 kernel
+drwxr-xr-x  4 luoyi users     4096 May 17 11:59 rootfs
+[luoyi@qt-luoyi a]$ tree bootloader/
+bootloader/
+├── sunxi-spl.bin
+└── u-boot.bin
+
+0 directories, 2 files
+#+end_src
+
+然后把 bootloader 目录里头的两个文件分别写到 SD 卡上相应的位置：
+
+#+begin_src sh
+dd if=sunxi-spl.bin of={sdcard}    bs=1024 seek=8
+dd if=u-boot.bin    of={sdcard}    bs=1024 seek=32
+#+end_src
+
+
 * URL
 [[http://andre.blaatschaap.be/2013/01/installing-archlinuxarm-on-the-cubieboard/][Installing ArchLinuxARM on the CubieBoard]]
 
