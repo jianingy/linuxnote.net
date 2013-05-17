@@ -65,7 +65,7 @@ ArchLinuxArm 提供了“即插即用”的 CubieBoard 可用的 tgz 包，里�
 
 ** linux-sunxi Kernel
 
-ArchLinux Host 机器上，我们用 * packer -S --noedit --noconfirm * 装上如下 package:
+ArchLinux Host 机器上，我们用 =packer -S --noedit --noconfirm= 装上如下 package:
 
 - binutils-arm-linux-gnueabihf-bin 
 - cpp-arm-linux-gnueabihf-bin 
