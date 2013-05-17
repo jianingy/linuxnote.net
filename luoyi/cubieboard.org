@@ -79,6 +79,7 @@ ArchLinux Host 机器上，我们用 =packer -S --noedit --noconfirm= 装上如�
 
 
 #+begin_src sh
+
 [luoyi@qt-luoyi linux-sunxi]$ git branch -a
 * stage/sunxi-3.4
   sunxi-3.0
@@ -109,9 +110,12 @@ ArchLinux Host 机器上，我们用 =packer -S --noedit --noconfirm= 装上如�
   remotes/origin/wip/linux-sunxi-3.0/sun5i
   remotes/origin/wip/linux-sunxi-3.4/cubieboard
   remotes/origin/wip/sunxi-3.4/rtl8188eu
+
 #+end_src
 
 切换 branch 的时候，去掉 =remotes/origin/= 前缀。例如： =git checkout wip/lichee3-sunxi/import-sun5i= 这样来做分支切换。
+
+
 repo 里面，对 sunxi 的设备有很多默认的配置：
 
 
