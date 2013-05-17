@@ -112,6 +112,35 @@ ArchLinux Host 机器上，我们用 =packer -S --noedit --noconfirm= 装上如�
 #+end_src
 
 切换 branch 的时候，去掉 =remotes/origin/= 前缀。例如： =git checkout wip/lichee3-sunxi/import-sun5i= 这样来做分支切换。
+repo 里面，对 sunxi 的设备有很多默认的配置：
+
+
+#+begin_src sh
+[luoyi@qt-luoyi linux-sunxi]$ find . -name '*sun*defconfig'
+./arch/m68k/configs/sun3x_defconfig
+./arch/m68k/configs/sun3_defconfig
+./arch/arm/configs/sun4i_defconfig
+./arch/arm/configs/sun3i_defconfig
+./arch/arm/configs/sun5i_defconfig
+./arch/arm/configs/sun4i_crane_defconfig
+#+end_src
+
+我们将 =sun4i_defconfig= 做为我们配置的起点:
+
+#+begin_src sh
+cp ./arch/arm/configs/sun4i_defconfig .
+#+end_src
+
+设定好交叉编译的环境变量：
+
+#+begin_src sh
+export ARCH=arm 
+export CROSS_COMPILE=arm-linux-gnueabihf-
+#+end_src
+
+
+然后 =make sun4i_defconfig= 就可以直接开始编译了。
+
 
 
 
