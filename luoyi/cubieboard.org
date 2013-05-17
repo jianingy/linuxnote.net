@@ -26,7 +26,8 @@
 ** 写入 u-Boot 
 
 
-下载 [[http://dl.linux-sunxi.org/users/amery/sunxi-3.0/latest/cubieboard_hwpack.tar.xz][最新的 CubieBoard HardWare Package]]，解压缩：
+下载 [[http://dl.linux-sunxi.org/users/amery/sunxi-3.0/latest/cubieboard_hwpack.tar.xz][最新的 CubieBoard HardWare Package]],
+解压缩，写入 SD 卡上特定的地址。
 
 
 #+begin_src sh
@@ -53,6 +54,13 @@ bootloader/
 dd if=sunxi-spl.bin of={sdcard}    bs=1024 seek=8
 dd if=u-boot.bin    of={sdcard}    bs=1024 seek=32
 #+end_src
+
+
+** 下载 ArchLinuxArm 的 Tar 包。
+
+ArchLinuxArm 提供了“即插即用”的 CubieBoard 可用的 tgz 包，里头有完整可用的 Kernel 和 rootfs 。下载地址：
+[[http://archlinuxarm.org/os/sun4i/cubieboard-bootloader.tar.gz][ArchLinuxARM BootLoader]]
+[[http://archlinuxarm.org/os/ArchLinuxARM-sun4i-latest.tar.gz][ArchLinuxARM rootfs]]
 
 
 * URL
