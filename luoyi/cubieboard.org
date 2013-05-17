@@ -63,6 +63,19 @@ ArchLinuxArm 提供了“即插即用”的 CubieBoard 可用的 tgz 包，里�
 [[http://archlinuxarm.org/os/ArchLinuxARM-sun4i-latest.tar.gz][ArchLinuxARM rootfs]]
 
 
+** linux-sunxi Kernel
+
+ArchLinux Host 机器上，我们用 * packer -S --noedit --noconfirm * 装上如下 package:
+
+- binutils-arm-linux-gnueabihf-bin 
+- cpp-arm-linux-gnueabihf-bin 
+- gcc-arm-linux-gnueabihf-bin 
+
+做为我们的 cross compile 的环境。
+
+
+
+
 * URL
 [[http://andre.blaatschaap.be/2013/01/installing-archlinuxarm-on-the-cubieboard/][Installing ArchLinuxARM on the CubieBoard]]
 
