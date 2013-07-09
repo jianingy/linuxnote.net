@@ -72,6 +72,7 @@ brew install irssi
 首先我们在命令行下键入 /irssi/ 来启动这个客户端程序，你会看到如下的界
 面：
 
+#+ATTR_HTML: width="640px"
 [[http://upload.wikimedia.org/wikipedia/commons/c/c2/IRSSI_screenshot.png]]
 
 靠下方蓝色的部分是状态条，他把屏幕分成其上方的主区域和命令区域两个部分。
