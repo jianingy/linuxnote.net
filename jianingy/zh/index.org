@@ -21,6 +21,7 @@ C3560 配置笔记
 
 ** [[file:linux/mail.org][Linux 个人邮件系统配置指南]]
 
+** [[file:linux/a-brief-introduction-to-irc.org][IRC: 黑客们的交流平台]]
 * Emacs
 
 ** [[file:emacs/blorgit.org][Blorgit]]
